@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Lucky Seven</title>
+  <link rel="shortcut icon" type="image/x-icon" href="images/favicon.png">
+
+  <!-- PLEASE NO CHANGES BELOW THIS LINE (UNTIL I SAY SO) -->
+  <script language="javascript" type="text/javascript" src="libraries/p5.min.js"></script>
+  <script language="javascript" type="text/javascript" src="libraries/audioworklet-polyfill.js"></script>
+  <script language="javascript" type="text/javascript" src="libraries/p5.sound.min.js"></script>
+  <script language="javascript" type="text/javascript" src="card_description.js"></script>
+  <script language="javascript" type="text/javascript" src="mapcoordinate.js"></script>
+  <script language="javascript" type="text/javascript" src="squadmember.js"></script>
+  <script language="javascript" type="text/javascript" src="threat.js"></script>
+  <script language="javascript" type="text/javascript" src="utilities_common.js"></script>
+  <script language="javascript" type="text/javascript" src="utilities_overview.js"></script>
+  <script language="javascript" type="text/javascript" src="the_lucky_seven.js"></script>
+  <!-- OK, YOU CAN MAKE CHANGES BELOW THIS LINE AGAIN -->
+
+  <link rel="stylesheet" href="index.css ">
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="ui-settings-prompt" class="ui-card-description">
+  <h1 class="ui-settings-title">Settings</h1>
+  <div class="ui-settings-option-left ui-settings-option-row-1 ui-settings-page1">
+    <input type="number" id="ui-settings-option-0" class="ui-settings-text-box-number" min="0" max="7">
+    <label for="ui-settings-option-0">Total squad members missing in action</label>
+  </div>
+  <div class="ui-settings-option-left ui-settings-option-row-2 ui-settings-page1">
+    <input type="checkbox" id="ui-settings-option-1" class="ui-settings-checkbox">
+    <label for="ui-settings-option-1">Threats with 0 strength cannot attack</label>
+  </div>
+  <div class="ui-settings-option-left ui-settings-option-row-3 ui-settings-page1">
+    <input type="checkbox" id="ui-settings-option-2" class="ui-settings-checkbox">
+    <label for="ui-settings-option-2">Select threat columns during Encounter phase</label>
+  </div>
+  <div class="ui-settings-option-left ui-settings-option-row-4 ui-settings-page1">
+    <input type="checkbox" id="ui-settings-option-3" class="ui-settings-checkbox">
+    <label for="ui-settings-option-3">Increase final turns based on defeated squad members</label>
+  </div>
+  
+  <div class="ui-settings-option-left ui-settings-option-row-1 ui-settings-page2">
+    <input type="number" id="ui-settings-option-4" class="ui-settings-text-box-number" min="1" max="100">
+    <label for="ui-settings-option-4">Total threats</label>
+  </div>
+  <div class="ui-settings-option-left ui-settings-option-row-2 ui-settings-page2">
+    <input type="number" id="ui-settings-option-5" class="ui-settings-text-box-number" min="0" max="100">
+    <label for="ui-settings-option-5">Available infantry (1)</label>
+  </div>
+  <div class="ui-settings-option-left ui-settings-option-row-3 ui-settings-page2">
+    <input type="number" id="ui-settings-option-6" class="ui-settings-text-box-number" min="0" max="100">
+    <label for="ui-settings-option-6">Available infantry (2)</label>
+  </div>
+  <div class="ui-settings-option-left ui-settings-option-row-4 ui-settings-page2">
+    <input type="number" id="ui-settings-option-7" class="ui-settings-text-box-number" min="0" max="100">
+    <label for="ui-settings-option-7">Available machine guns</label>
+  </div>
+  <div class="ui-settings-option-right ui-settings-option-row-2 ui-settings-page2">
+    <input type="number" id="ui-settings-option-8" class="ui-settings-text-box-number" min="0" max="100">
+    <label for="ui-settings-option-8">Available flares</label>
+  </div>
+  <div class="ui-settings-option-right ui-settings-option-row-3 ui-settings-page2">
+    <input type="number" id="ui-settings-option-9" class="ui-settings-text-box-number" min="0" max="100">
+    <label for="ui-settings-option-9">Available mortars</label>
+  </div>
+  <div class="ui-settings-option-right ui-settings-option-row-4 ui-settings-page2">
+    <input type="number" id="ui-settings-option-10" class="ui-settings-text-box-number" min="0" max="100">
+    <label for="ui-settings-option-10">Available tanks</label>
+  </div>
+  
+  <button style="left: 64px;" class="ui-button ui-settings-button" onClick="toggleSettings('ui-settings-page1')">Misc.</button>
+  <button style="left: 192px;" class="ui-button ui-settings-button" onClick="toggleSettings('ui-settings-page2')">Threats</button>
+  <button style="left: 452px;" class="ui-button ui-settings-button" onClick="configureSettingsDefault()">Default Settings</button>
+  <button style="left: 580px;" class="ui-button ui-settings-button" onClick="applySettings()">Apply</button>
+  <button style="left: 708px;" class="ui-button ui-settings-button" onClick="closeSettings()">Cancel</button>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,144 @@
+@font-face {
+  font-family: Montserrat-ExtraBold;
+  src: url(fonts/Montserrat-ExtraBold.ttf)
+}
+
+.ui-overview-title {
+  color: #FFFFFF;
+  font-size: 64px;
+  width: 200%; /* Preferred over 100% to ensure the title shows all on one line on mobile devices */
+}
+
+.ui-paragraph,
+.ui-button,
+.ui-settings-title {
+  font-family: Montserrat-ExtraBold;
+}
+
+.ui-button {
+  box-shadow: 2px 2px 0 #000000; 
+}
+
+.ui-phase-label {
+  font-size: 16px;
+  text-align: center;
+}
+
+.ui-turn-label {
+  font-size: 36px;
+  text-align: center;
+}
+
+.ui-card-image {
+  border-radius: 25px;
+}
+
+.ui-card-description {
+  border-radius: 10px;
+  font-size: 24px;
+  font-family: Geneva, sans-serif;
+  width: 150px;
+  background-color: #9E9B86;
+  box-shadow: 6px 6px 1px #4D4D4D;
+  padding: 5px;
+}
+
+.ui-card-description-title {
+  font-family: Montserrat-ExtraBold;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.ui-card-description-strength {
+  font-family: Montserrat-ExtraBold;
+  text-align: center;
+}
+
+.ui-card-description-blurb {
+  font-size: 18px;
+  text-align: center;
+}
+
+.ui-strength-reduced {
+  color: #FA2B3C;
+}
+
+.ui-strength-normal {
+  color: #000000;
+}
+
+.ui-strength-boosted {
+  color: rgb(126, 255, 140);
+}
+
+#ui-settings-prompt {
+  display: none;
+  position: absolute;
+  margin-top: 1em;
+  margin-left: 1em;
+  width: 35em;
+  height: 20em;
+  z-index: 1;
+}
+
+.ui-settings-title {
+  position: absolute;
+  left: 7em;
+}
+
+.ui-settings-option-left,
+.ui-settings-option-right,
+.ui-settings-button {
+  position: inherit;
+}
+
+.ui-settings-option-left {
+  left: 64px;
+}
+
+.ui-settings-option-right {
+  left: 448px;
+}
+
+.ui-settings-button {
+  top: 402px;
+  width: 96px;
+  height: 48px;
+}
+
+.ui-settings-checkbox {
+  width: 24px;
+  height: 24px;
+  vertical-align: top;
+}
+
+.ui-settings-text-box-number {
+  width: 64px;
+  font-size: 24px;
+  text-align: center;
+}
+
+.ui-settings-option-row-1 {
+  top: 128px;
+}
+
+.ui-settings-option-row-2 {
+  top: 192px;
+}
+
+.ui-settings-option-row-3 {
+  top: 256px;
+}
+
+.ui-settings-option-row-4 {
+  top: 320px;
+}
+
+.ui-settings-page2 {
+  display: none;
+}
+
+.ui-settings-icon {
+  width: 32px;
+  height: 32px;
+}

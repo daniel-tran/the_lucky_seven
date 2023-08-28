@@ -1,0 +1,18 @@
+{
+  "name": "The Lucky Seven",
+  "version": "1.0.0",
+  "description": "An unofficial browser version of 'The Lucky Seven' by Coincidence",
+  "main": "the_lucky_seven.js",
+  "scripts": {
+    "start": "http-server -d false -p 777",
+    "dev": "npm run start -- -c-1"
+  },
+  "keywords": [
+    "zachtronics"
+  ],
+  "author": "Yes",
+  "license": "MIT",
+  "dependencies": {
+    "http-server": "^14.1.1"
+  }
+}
