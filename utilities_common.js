@@ -149,7 +149,7 @@ function getAllThreatsAt(column, row) {
 function canThreatMoveToNewColumn(threat, x, y) {
   if (x > game.grid.length || x < 0) {
     // The Y coordinate is handled outside of this function and doesn't need to be checked
-    console.log(`${threat.name} cannot move to ${x},${y} because it is out of bounds`);
+    console.debug(`${threat.name} cannot move to ${x},${y} because it is out of bounds`);
     return false;
   }
   // Disable column changing using a base condition
@@ -157,7 +157,7 @@ function canThreatMoveToNewColumn(threat, x, y) {
   for (let ci = 0; ci < game.grid[x][y].length && canMoveToNewCell; ci++) {
     if ((game.grid[x][y][ci].isFriendly > 0 && !threat.canOverlapWithSquad) ||
         (game.grid[x][y][ci].isFriendly < 0 && !threat.canOverlapWithSquad && !game.grid[x][y][ci].canOverlapWithSquad)) {
-      console.log(`Cannot move ${threat.name} to new cell`);
+      console.debug(`Cannot move ${threat.name} to new cell`);
       canMoveToNewCell = false;
       break;
     }

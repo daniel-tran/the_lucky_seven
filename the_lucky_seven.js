@@ -239,7 +239,7 @@ function pressPhaseNext() {
 }
 
 function pressPhaseUndo() {
-  console.log("Resetting the phase back to the initial state");
+  console.debug("Resetting the phase back to the initial state");
   playSound(SOUND_MAPPING.BUTTON_UNDO);
   game = structuredClone(snapshot);
   // For simplicity, undo the phase with a clean selection state.
@@ -272,13 +272,13 @@ function pressPhaseUndo() {
 }
 
 function pressGameReset() {
-  console.log("Game reset!");
+  console.debug("Game reset!");
   playSound(SOUND_MAPPING.BUTTON_NEW_GAME);
   setupNewGame();
 }
 
 function pressFlipUp() {
-  console.log("Flip up!");
+  console.debug("Flip up!");
   let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
   if (game.squadSelectedCoordinate && canFlipUp(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, friendlyIndex)) {
     playSound(SOUND_MAPPING.BUTTON_FLIP_UP);
@@ -289,46 +289,46 @@ function pressFlipUp() {
 
 function canFlipUp(x, y, z) {
   if (game.grid[x][y][z].up) {
-    console.log(`Not able to flip up because ${game.grid[x][y][z].name} is already up`);
+    console.debug(`Not able to flip up because ${game.grid[x][y][z].name} is already up`);
     return false;
   }
   if (game.grid[x][y][z].rotated) {
-    console.log(`Not able to flip up because ${game.grid[x][y][z].name} is rotated`);
+    console.debug(`Not able to flip up because ${game.grid[x][y][z].name} is rotated`);
     return false;
   }
   
   if (game.grid[x][y][z].canFlipUpWithoutSquadMember()) {
-    console.log("The Leader can flip up by themselves");
+    console.debug("The Leader can flip up by themselves");
     return true;
   }
   
   let adjacentLeaders = filterAdjacentFriendliesAt(x, y, true, 1, true);
   if (adjacentLeaders.length > 0) {
-    console.log("The Leader is nearby! Able to flip up from a diagonal position in addition to the normal flip up rules.");
+    console.debug("The Leader is nearby! Able to flip up from a diagonal position in addition to the normal flip up rules.");
     return true;
   }
   
   let adjacentSquares = getAdjacentMapCoordinates(x, y, false, false);
   for (let i = 0; i < adjacentSquares.length; i++) {
-    console.log(`Checking ${adjacentSquares[i].x},${adjacentSquares[i].y}`);
+    console.debug(`Checking ${adjacentSquares[i].x},${adjacentSquares[i].y}`);
     let adjacentFriendlyIndex = getFriendlyIndexAt(adjacentSquares[i].x, adjacentSquares[i].y, 1);
     if (adjacentFriendlyIndex >= 0 && game.grid[adjacentSquares[i].x][adjacentSquares[i].y][adjacentFriendlyIndex].up) {
       return true;
     }
   }
-  console.log("Not able to flip up because there is no adjacent squad member who is up");
+  console.debug("Not able to flip up because there is no adjacent squad member who is up");
   return false;
 }
 
 function pressFlipDown() {
-  console.log("Flip down!");
+  console.debug("Flip down!");
   if (game.squadSelectedCoordinate) {
     let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
     if (game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up) {
       playSound(SOUND_MAPPING.BUTTON_FLIP_DOWN);
       game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].registerFlip(false);
     } else {
-      console.log(`Cannot flip down because ${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].name} is already down`);
+      console.debug(`Cannot flip down because ${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].name} is already down`);
       return;
     }
     pressCancel();
@@ -378,13 +378,13 @@ function getMovementCoordinates(startX, startY) {
   for (let c = 0; c < coordinates.length; c++) {
     if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, -1)) {
       // Space is occupied by a threat
-      console.log("Space is occupied by a threat");
+      console.debug("Space is occupied by a threat");
       continue;
     }
     let friendlyIndex = getFriendlyIndexAt(coordinates[c].x, coordinates[c].y, 1);
     if (friendlyIndex >= 0 && (!game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].isMovable() || !game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].up)) {
       // Space is occupied by a immovable squad member (remember that squad members who are down cannot move at all)
-      console.log("Space is occupied by a immovable squad member");
+      console.debug("Space is occupied by a immovable squad member");
       continue;
     }
     // Exclude diagonal spaces that are cut off by threats
@@ -393,16 +393,16 @@ function getMovementCoordinates(startX, startY) {
         (relativeMapCoordinate.x === 1 && relativeMapCoordinate.y === -1) ||
         (relativeMapCoordinate.x === -1 && relativeMapCoordinate.y === 1) ||
         (relativeMapCoordinate.x === 1 && relativeMapCoordinate.y === 1)) {
-          console.log(`Testing diagonal square on ${coordinates[c].x},${coordinates[c].y}`);
-          console.log(`using vector ${relativeMapCoordinate.x},${relativeMapCoordinate.y}`);
-          console.log(`which means ${startX + relativeMapCoordinate.x},${startY}`);
-          console.log(`and ${startX},${startY + relativeMapCoordinate.y}`);
+          console.debug(`Testing diagonal square on ${coordinates[c].x},${coordinates[c].y}`);
+          console.debug(`using vector ${relativeMapCoordinate.x},${relativeMapCoordinate.y}`);
+          console.debug(`which means ${startX + relativeMapCoordinate.x},${startY}`);
+          console.debug(`and ${startX},${startY + relativeMapCoordinate.y}`);
           // Since the start cell and relative coordinate are valid positions in the grid,
           // it can be inferred that the adjacent coordinates shared by them are also valid
           // (unless a non-qualdrilateral grid is allowed, then this would have to be revisited)
           if (containsFriendlyIndex(startX + relativeMapCoordinate.x, startY, -1) &&
               containsFriendlyIndex(startX, startY + relativeMapCoordinate.y, -1)) {
-                console.log("Space is blocked off by adjacent threats");
+                console.debug("Space is blocked off by adjacent threats");
                 continue;
               }
         }
@@ -417,7 +417,7 @@ function getAttackCoordinates(startX, startY, includeDiagonals) {
   let coordinatesValid = [];
   for (let c = 0; c < coordinates.length; c++) {
     if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, -1)) {
-      console.log(`${coordinates[c].x}, ${coordinates[c].y} can be attacked`);
+      console.debug(`${coordinates[c].x}, ${coordinates[c].y} can be attacked`);
       coordinatesValid.push(coordinates[c]);
     }
   }
@@ -425,19 +425,19 @@ function getAttackCoordinates(startX, startY, includeDiagonals) {
 }
 
 function activateMortar(mortarX, mortarY, includeDirectHit) {
-  console.log(`Mortar is at ${mortarX},${mortarY}`);
+  console.debug(`Mortar is at ${mortarX},${mortarY}`);
   let affectedCoordinates = getAdjacentMapCoordinates(mortarX, mortarY, true, false);
   for (let i = 0; i < affectedCoordinates.length; i++) {
-    console.log(`Mortar struck at ${affectedCoordinates[i].x},${affectedCoordinates[i].y}`);
+    console.debug(`Mortar struck at ${affectedCoordinates[i].x},${affectedCoordinates[i].y}`);
     for (let squadIndex = 0; squadIndex < game.squad.length; squadIndex++) {
       if (game.squad[squadIndex].x === affectedCoordinates[i].x &&
           game.squad[squadIndex].y === affectedCoordinates[i].y) {
             // Note that the grid has a reference to the squad list, so it gets updated automatically
             game.squad[squadIndex].up = false;
-            console.log(`${game.squad[squadIndex].name} is down!`);
+            console.debug(`${game.squad[squadIndex].name} is down!`);
             
             if (includeDirectHit && game.squad[squadIndex].x === mortarX && game.squad[squadIndex].y === mortarY) {
-              console.log(`${game.squad[squadIndex].name} took a direct hit from the mortar!`);
+              console.debug(`${game.squad[squadIndex].name} took a direct hit from the mortar!`);
               game.squad[squadIndex].rotated = true;
               game.squad[squadIndex].canMove = false;
             }
@@ -497,7 +497,7 @@ function resolveThreatOverlap(threatToBePlaced, column, row) {
     // Keep the check indexes within bounds, although this does mean the edges can be checked multiple times for no good reason
     let indexLeft = Math.max(MIN_MAP_CARD_VALUE, Math.min(column - indexLeftRelative, MAX_MAP_CARD_VALUE));
     let indexRight = Math.max(MIN_MAP_CARD_VALUE, Math.min(column + indexRightRelative, MAX_MAP_CARD_VALUE));
-    console.log(`Checking ${indexLeft} and then ${indexRight}`);
+    console.debug(`Checking ${indexLeft} and then ${indexRight}`);
     if (checkLeftSideFirst) {
       if (indexLeft >= 0 && game.grid[indexLeft][row].length <= 0) {
         // Found a spare slot somewhere on the left
@@ -520,12 +520,12 @@ function resolveThreatOverlap(threatToBePlaced, column, row) {
   }
   
   if (lastSquadMemberX >= 0 && lastSquadMemberX < game.grid.length) {
-    console.log(`Found a squad member at ${lastSquadMemberX},${row} who can be discarded`);
+    console.debug(`Found a squad member at ${lastSquadMemberX},${row} who can be discarded`);
     removeFriendliesAt(lastSquadMemberX, row);
     return lastSquadMemberX;
   }
   
-  console.log(`No more space on the row at all - discarding the threat`);
+  console.debug(`No more space on the row at all - discarding the threat`);
   return -1;
 }
 
@@ -785,17 +785,17 @@ function setupNewGame() {
     }
   }
   game.threats = shuffleListNonDestructively(game.threats, game.threats.length - game.settings.THREAT_COUNT_TOTAL);
-  console.log(`Total threats: ${game.threats.length}`);
+  console.debug(`Total threats: ${game.threats.length}`);
   
   // Randomise horizontal map cards
   game.mapcardsX = shuffleListNonDestructively(MAPCARDS_BENCH_X);
-  console.log("Finished horizontal map cards");
-  console.log(JSON.stringify(game.mapcardsX));
+  console.debug("Finished horizontal map cards");
+  console.debug(JSON.stringify(game.mapcardsX));
   
   // Randomise vertical map cards
   game.mapcardsY = shuffleListNonDestructively(MAPCARDS_BENCH_Y);
-  console.log("Finished vertical map cards");
-  console.log(JSON.stringify(game.mapcardsY));
+  console.debug("Finished vertical map cards");
+  console.debug(JSON.stringify(game.mapcardsY));
   
   // Randomise squad member positions
   let c = MIN_MAP_CARD_VALUE;
@@ -805,7 +805,7 @@ function setupNewGame() {
     // Apply offset to ensure first row and column remain unoccupied (reserved for map cards & Tanks)
     game.squad[s].x = findMapCardWithValue(game.mapcardsX, c) + mapCardOffset.x;
     game.squad[s].y = findMapCardWithValue(game.mapcardsY, c) + mapCardOffset.y;
-    console.log(`${game.squad[s].name} is at ${game.squad[s].x},${game.squad[s].y}`);
+    console.debug(`${game.squad[s].name} is at ${game.squad[s].x},${game.squad[s].y}`);
     game.grid[game.squad[s].x][game.squad[s].y].push(game.squad[s]);
     c++;
   }
@@ -827,26 +827,26 @@ function setupNewGame() {
   
   startPhaseEncounter();
   snapshotGameState();
-  console.log(JSON.stringify(game.grid));
+  console.debug(JSON.stringify(game.grid));
 }
 
 function startPhaseEncounter() {
   // PHASE SUMMARY
   // - When there are no threats, start the countdown at 2 turns (including the turn when it was realised there are no more threats)
   // - Determine win condition at the end of that final turn (i.e. lose if everyone is gone or any threats remain by the Wrap Up phase) 
-  console.log("Encounter phase has started.");
+  console.debug("Encounter phase has started.");
   for (let i = CELL_RESERVATION.y; i <= game.grid[0].length - 1 && game.threats.length > 0; i++) {
     let newThreat = game.threats.splice(0, 1)[0];
     // Note that threats are not guaranteed to be distributed equally among all rows, so this cannot be pre-calculated
     newThreat.y = i;
     game.threatsActive.push(newThreat);
-    console.log(`${newThreat.name} (${newThreat.getStrength()}) was placed at ${newThreat.x},${i}`);
+    console.debug(`${newThreat.name} (${newThreat.getStrength()}) was placed at ${newThreat.x},${i}`);
     if (game.grid[newThreat.x][i].length > 0 && !newThreat.canOverlapWithSquad) {
-      console.log("PROBLEM! Overlap has to be handled");
+      console.debug("PROBLEM! Overlap has to be handled");
       newThreat.x = resolveThreatOverlap(newThreat, newThreat.x, i);
-      console.log(`${newThreat.name} (${newThreat.getStrength()}) was shifted to ${newThreat.x},${i}`);
+      console.debug(`${newThreat.name} (${newThreat.getStrength()}) was shifted to ${newThreat.x},${i}`);
       if (newThreat.x < 0) {
-        console.log(`${newThreat.name} (${newThreat.getStrength()}) has been discarded since the row is full`);
+        console.debug(`${newThreat.name} (${newThreat.getStrength()}) has been discarded since the row is full`);
         continue;
       }
     }
@@ -869,12 +869,12 @@ function startPhaseEncounter() {
   }
   
   if (game.threats.length <= 0) {
-    console.log(`The chopper has arrived! ${game.finalTurnsRemaining} turns (current one included) until the game ends`);
+    console.debug(`The chopper has arrived! ${game.finalTurnsRemaining} turns (current one included) until the game ends`);
   }
 }
 
 function startPhaseManeuver() {
-  console.log("Encounter phase has ended.");
+  console.debug("Encounter phase has ended.");
   // Reset squad member selection in case something was pressed beforehand 
   game.squadSelectedCoordinate = null;
   // Reset the pending threats, in case the columns were changed around
@@ -894,7 +894,7 @@ function startPhaseManeuver() {
     for (let y = 0; y < game.grid[x].length; y++) {
       let mortarIndex = containsThreatType(x, y, 5);
       if (mortarIndex >= 0) {
-        console.log(`Removing mortar at ${x},${y},${mortarIndex}`);
+        console.debug(`Removing mortar at ${x},${y},${mortarIndex}`);
         game.grid[x][y].splice(mortarIndex, 1);
         continue;
       }
@@ -904,13 +904,13 @@ function startPhaseManeuver() {
       if (flareIndex >= 0) {
         let friendlyIndex = getFriendlyIndexAt(x, y, 1);
         if (friendlyIndex >= 0) {
-          console.log(`${game.grid[x][y][friendlyIndex].name} was hit by the flare at ${x},${y},${flareIndex}`);
+          console.debug(`${game.grid[x][y][friendlyIndex].name} was hit by the flare at ${x},${y},${flareIndex}`);
           game.grid[x][y][friendlyIndex].canMove = false;
         }
       }
     }
   }
-  console.log(JSON.stringify(game.grid));
+  console.debug(JSON.stringify(game.grid));
   
   // PHASE SUMMARY
   // - Be able to move squad members (rotates them afterward)
@@ -922,11 +922,11 @@ function startPhaseManeuver() {
   // - Be able to flip up IF adjacent to an up squad member (rotates them afterward)
   // - At the end of the phase, unrotate all sqsuad members
   
-  console.log("Maneuver phase has started.");
+  console.debug("Maneuver phase has started.");
 }
 
 function startPhaseAttack() {
-  console.log("Maneuver phase has ended.");
+  console.debug("Maneuver phase has ended.");
   // Clear movements, since these would not be valid in this phase
   game.moveCoordinates = [];
 
@@ -945,7 +945,7 @@ function startPhaseAttack() {
     for (let y = 0; y < game.grid[x].length; y++) {
       let flareIndex = containsThreatType(x, y, 4);
       if (flareIndex >= 0) {
-        console.log(`Removing flare at ${x},${y},${flareIndex}`);
+        console.debug(`Removing flare at ${x},${y},${flareIndex}`);
         game.grid[x][y].splice(flareIndex, 1);
       }
     }
@@ -955,20 +955,20 @@ function startPhaseAttack() {
   // - Target attackable threat from adjacent & up squad member
   // - Discard threat when attackers' combined strength >= threat strength 
   
-  console.log("Attack phase has started.");
+  console.debug("Attack phase has started.");
 }
 
 function startPhaseCounterAttack() {
-  console.log("Attack phase has ended.");
+  console.debug("Attack phase has ended.");
   // Clear attack coordinates, since these are not relevant in this phase
   game.attackCoordinates = [];
 
   // Remove defeated active threats
   let defeatedThreatCoordinates = [];
   for (let i = 0; i < game.threatsActive.length; i++) {
-    console.log(game.threatsActive[i]);
+    console.debug(game.threatsActive[i]);
     if (game.threatsActive[i].isDefeated()) {
-      console.log(`Defeated ${game.threatsActive[i].name}`);
+      console.debug(`Defeated ${game.threatsActive[i].name}`);
       // Remove the same threats from the grid
       let threatIndex = getFriendlyIndexAt(game.threatsActive[i].x, game.threatsActive[i].y, -1);
       game.grid[game.threatsActive[i].x][game.threatsActive[i].y].splice(threatIndex, 1);
@@ -1002,15 +1002,15 @@ function startPhaseCounterAttack() {
     game.squad[i].postAttackReset();
   }
   determineGameOutcome();
-  console.log("Counter-Attack phase has started.");
+  console.debug("Counter-Attack phase has started.");
   
   // PHASE SUMMARY
   // - Highlight all squares that active threats will attack
 }
 
 function startPhaseWrapUp() {
-  console.log("Counter-Attack phase has ended.");
-  console.log("Wrap Up phase has started.");
+  console.debug("Counter-Attack phase has ended.");
+  console.debug("Wrap Up phase has started.");
   // PHASE SUMMARY
   // - At the end, discard squad members as required + apply "down" rules
   // - At the end, discard all Tanks
@@ -1019,7 +1019,7 @@ function startPhaseWrapUp() {
     let discardedFriendlyIndex = getFriendlyIndexAt(game.counterAttackCoordinates[c].x, game.counterAttackCoordinates[c].y, 1);
     if (discardedFriendlyIndex >= 0) {
       let squadIndex = getSquadMemberIndexWithName(game.grid[game.counterAttackCoordinates[c].x][game.counterAttackCoordinates[c].y][discardedFriendlyIndex].name);
-      console.log(`${game.grid[game.counterAttackCoordinates[c].x][game.counterAttackCoordinates[c].y][discardedFriendlyIndex].name} did not make it...`);
+      console.debug(`${game.grid[game.counterAttackCoordinates[c].x][game.counterAttackCoordinates[c].y][discardedFriendlyIndex].name} did not make it...`);
       // Discard the squad member
       game.squad.splice(squadIndex, 1);
       increaseFinalTurns();
@@ -1031,7 +1031,7 @@ function startPhaseWrapUp() {
     let discardedFriendlyIndex = getFriendlyIndexAt(game.counterAttackCoordinatesDodgeable[c].x, game.counterAttackCoordinatesDodgeable[c].y, 1);
     if (discardedFriendlyIndex >= 0 && game.grid[game.counterAttackCoordinatesDodgeable[c].x][game.counterAttackCoordinatesDodgeable[c].y][discardedFriendlyIndex].up) {
       let squadIndex = getSquadMemberIndexWithName(game.grid[game.counterAttackCoordinatesDodgeable[c].x][game.counterAttackCoordinatesDodgeable[c].y][discardedFriendlyIndex].name);
-      console.log(`${game.grid[game.counterAttackCoordinatesDodgeable[c].x][game.counterAttackCoordinatesDodgeable[c].y][discardedFriendlyIndex].name} ducked too late...`);
+      console.debug(`${game.grid[game.counterAttackCoordinatesDodgeable[c].x][game.counterAttackCoordinatesDodgeable[c].y][discardedFriendlyIndex].name} ducked too late...`);
       // Discard the squad member
       game.squad.splice(squadIndex, 1);
       // EXTRA: Players gain extra final turns with fewer squad members
@@ -1057,19 +1057,19 @@ function startPhaseWrapUp() {
     // Simplify the loop under the premise that Tanks only occupt the first column 
     let tankIndex = containsThreatType(x, y, 0);
     if (tankIndex >= 0) {
-      console.log(`Removing tank at ${x},${y},${tankIndex}`);
+      console.debug(`Removing tank at ${x},${y},${tankIndex}`);
       game.grid[x][y].splice(tankIndex, 1);
     }
   }
      
   determineGameOutcome();
-  console.log("Wrap Up phase has ended.");
+  console.debug("Wrap Up phase has ended.");
 }
 
 function determineGameOutcome() {
   if (game.squad.length <= 0) {
     // It's still a loss if the entire squad is eliminated along with all the threats
-    console.log(`The entire squad has been eliminated. Reload the page to play again`);
+    console.debug(`The entire squad has been eliminated. Reload the page to play again`);
     game.outcome = -1;
   } else if (game.threats.length <= 0) {
     if (isPhaseWrapUp()) {
@@ -1080,10 +1080,10 @@ function determineGameOutcome() {
       game.finalScore += game.finalTurnPenalty;
     }
     if (game.threatsActive.length <= 0) {
-      console.log(`You made it out alive! Reload the page to play again`);
+      console.debug(`You made it out alive! Reload the page to play again`);
       game.outcome = 1;
     } else if (game.finalTurnsRemaining <= 0) {
-      console.log(`You failed to clear all the threats before the end. Reload the page to play again`);
+      console.debug(`You failed to clear all the threats before the end. Reload the page to play again`);
       game.outcome = -2;
     }
   }
@@ -1102,19 +1102,19 @@ function mouseClicked(event) {
   if (game.menuIndex !== MENU_MAPPING.GAME || isSettingsPromptActive()) {
     return;
   }
-  console.log(event);
+  console.debug(event);
   // This needs to account for scrollbars when zoomed in or on smaller displays
   let clickX = Math.floor((event.x + window.scrollX - (GRID_START.x * 0.5)) / GRID_SQUARE_WIDTH);
   let clickY = Math.floor((event.y + window.scrollY - (GRID_START.y * 0.75)) / GRID_SQUARE_HEIGHT);
-  console.log(clickX);
-  console.log(clickY);
+  console.debug(clickX);
+  console.debug(clickY);
   
   if (isPhaseEncounter()) {
     if (game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS) {
       // FEATURE: Threats can be assigned to a selectable column
       for (let t = 0; t < game.threatsPending.length; t++) {
         if (game.threatsPending[t].y === clickY) {
-          console.log(`Moving threat to ${game.threatsPending[t].x}, ${game.threatsPending[t].y}`);
+          console.debug(`Moving threat to ${game.threatsPending[t].x}, ${game.threatsPending[t].y}`);
           let unfriendlyIndex = containsThreatType(game.threatsPending[t].x, game.threatsPending[t].y, game.threatsPending[t].type);
           // First column is reserved for tanks
           if (clickX >= CELL_RESERVATION.x && canThreatMoveToNewColumn(game.threatsPending[t], clickX, clickY)) {
@@ -1134,7 +1134,7 @@ function mouseClicked(event) {
         let neighbourFriendlyIndex = getFriendlyIndexAt(clickX, clickY, 1);
         if (neighbourFriendlyIndex >= 0) {
           // Switching squad members (this would only be possible when both are movable)
-          console.log(`Switched squad members at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} <--> ${clickX},${clickY}`);
+          console.debug(`Switched squad members at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} <--> ${clickX},${clickY}`);
           game.grid[clickX][clickY].push(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex]);
           game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].push(game.grid[clickX][clickY][neighbourFriendlyIndex]);
           // Register movements
@@ -1148,7 +1148,7 @@ function mouseClicked(event) {
           game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].splice(oldFriendlyIndex, 1);
         } else {
           // Moving a squad member
-          console.log(`Moving squad member at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} --> ${clickX},${clickY}`);
+          console.debug(`Moving squad member at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} --> ${clickX},${clickY}`);
           game.grid[clickX][clickY].push(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex]);
           // Register movements
           game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].registerMove();
@@ -1185,7 +1185,7 @@ function mouseClicked(event) {
   // User pressed some other area on the grid
   if (clickX >= 0 && clickX < game.grid.length &&
       clickY >= 0 && clickY < game.grid[0].length) {
-        console.log(game.grid[clickX][clickY]);
+        console.debug(game.grid[clickX][clickY]);
         // Determine if a squad member was pressed on
         let friendlyIndex = getFriendlyIndexAt(clickX, clickY, 1);
         let threatIndex = getFriendlyIndexAt(clickX, clickY, -1);

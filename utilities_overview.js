@@ -89,7 +89,6 @@ function normaliseSettingNumber(fieldElementId) {
 }
 
 function applySettings() {
-  console.log("Applied settings!");
   sessionStorage.setItem(SESSION_STORAGE_KEY_SETTINGS, JSON.stringify(
   {
     // The total number of squad members subtracted when the game starts
