@@ -170,7 +170,7 @@ function getAdjacentFriendliesAt(column, row, includeDiagonals) {
   let adjacentSquares = getAdjacentMapCoordinates(column, row, false, includeDiagonals);
   let friendlyList = [];
   for (let i = 0; i < adjacentSquares.length; i++) {
-    let friendlyIndex = getFriendlyIndexAt(adjacentSquares[i].x, adjacentSquares[i].y, 1);
+    let friendlyIndex = getFriendlyIndexAt(adjacentSquares[i].x, adjacentSquares[i].y, SquadMember.friendlyIndex);
     if (friendlyIndex >= 0) {
       friendlyList.push(game.grid[adjacentSquares[i].x][adjacentSquares[i].y][friendlyIndex]);
     }

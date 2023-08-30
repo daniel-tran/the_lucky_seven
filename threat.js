@@ -1,4 +1,6 @@
 class Threat {
+  static friendlyIndex = -1;
+  
   constructor(type, x, y) {
     this.type = type;
     this.x = x;
@@ -7,7 +9,7 @@ class Threat {
     this.name = "";
     this.description = "";
     this.canOverlapWithSquad = false;
-    this.isFriendly = -1;
+    this.isFriendly = Threat.friendlyIndex;
     this.strengthOpposition = 0;
     this.strengthReduction = 0;
     

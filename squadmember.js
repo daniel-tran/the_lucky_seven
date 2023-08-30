@@ -1,4 +1,6 @@
 class SquadMember {
+    static friendlyIndex = 1;
+
     constructor(name, strength, colour, type) {
         this.name = name;
         this.strength = strength;
@@ -25,7 +27,7 @@ class SquadMember {
           this.postMovementActions.push("FLIPDOWN");
         }
 
-        this.isFriendly = 1;
+        this.isFriendly = SquadMember.friendlyIndex;
         this.squareWidth = 40;
         this.squareHeight = this.squareWidth;
         this.boostedStrength = 2;

@@ -85,7 +85,7 @@ function updateUI() {
   const butttonIndexFlipDown = 1;
   const butttonIndexCancel = 2;
   if (game.squadSelectedCoordinate) {
-    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
+    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
     if (isPhaseManeuver()) {
       // ABILITY: The Mouse can flip down after moving
       if (!game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].hasBeenFlipped && (!game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].rotated || game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].canFlipDownAfterMoving() )) {
@@ -147,7 +147,7 @@ function updateUI() {
   let cardDescriptionText = [];
   let cardDescriptionIndex = 0;
   if (game.squadSelectedCoordinate) {
-    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
+    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
     let squadMemberInfo = [
       getHTMLTextDivWithClass(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].name, "ui-card-description-title"),
       getHTMLTextDivWithClass(`<strong>Strength</strong>: <span class="${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getStrengthCSSClass()}">${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getStrength()}</span>`, "ui-card-description-strength"),
@@ -252,7 +252,7 @@ function pressPhaseUndo() {
   for (let s = 0; s < game.squad.length; s++) {
     Object.setPrototypeOf(game.squad[s], SquadMember.prototype);
     // Connect back the grid reference again
-    let friendlyIndex = getFriendlyIndexAt(game.squad[s].x, game.squad[s].y, 1);
+    let friendlyIndex = getFriendlyIndexAt(game.squad[s].x, game.squad[s].y, SquadMember.friendlyIndex);
     game.grid[game.squad[s].x][game.squad[s].y][friendlyIndex] = game.squad[s];
   }
   for (let t = 0; t < game.threats.length; t++) {
@@ -279,7 +279,7 @@ function pressGameReset() {
 
 function pressFlipUp() {
   console.debug("Flip up!");
-  let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
+  let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
   if (game.squadSelectedCoordinate && canFlipUp(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, friendlyIndex)) {
     playSound(SOUND_MAPPING.BUTTON_FLIP_UP);
     game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].registerFlip(true);
@@ -311,7 +311,7 @@ function canFlipUp(x, y, z) {
   let adjacentSquares = getAdjacentMapCoordinates(x, y, false, false);
   for (let i = 0; i < adjacentSquares.length; i++) {
     console.debug(`Checking ${adjacentSquares[i].x},${adjacentSquares[i].y}`);
-    let adjacentFriendlyIndex = getFriendlyIndexAt(adjacentSquares[i].x, adjacentSquares[i].y, 1);
+    let adjacentFriendlyIndex = getFriendlyIndexAt(adjacentSquares[i].x, adjacentSquares[i].y, SquadMember.friendlyIndex);
     if (adjacentFriendlyIndex >= 0 && game.grid[adjacentSquares[i].x][adjacentSquares[i].y][adjacentFriendlyIndex].up) {
       return true;
     }
@@ -323,7 +323,7 @@ function canFlipUp(x, y, z) {
 function pressFlipDown() {
   console.debug("Flip down!");
   if (game.squadSelectedCoordinate) {
-    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
+    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
     if (game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up) {
       playSound(SOUND_MAPPING.BUTTON_FLIP_DOWN);
       game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].registerFlip(false);
@@ -381,7 +381,7 @@ function getMovementCoordinates(startX, startY) {
       console.debug("Space is occupied by a threat");
       continue;
     }
-    let friendlyIndex = getFriendlyIndexAt(coordinates[c].x, coordinates[c].y, 1);
+    let friendlyIndex = getFriendlyIndexAt(coordinates[c].x, coordinates[c].y, SquadMember.friendlyIndex);
     if (friendlyIndex >= 0 && (!game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].isMovable() || !game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].up)) {
       // Space is occupied by a immovable squad member (remember that squad members who are down cannot move at all)
       console.debug("Space is occupied by a immovable squad member");
@@ -902,7 +902,7 @@ function startPhaseManeuver() {
       // While the threat X,Y coordinates are calculated, apply flare logic here as well
       let flareIndex = containsThreatType(x, y, 4);
       if (flareIndex >= 0) {
-        let friendlyIndex = getFriendlyIndexAt(x, y, 1);
+        let friendlyIndex = getFriendlyIndexAt(x, y, SquadMember.friendlyIndex);
         if (friendlyIndex >= 0) {
           console.debug(`${game.grid[x][y][friendlyIndex].name} was hit by the flare at ${x},${y},${flareIndex}`);
           game.grid[x][y][friendlyIndex].canMove = false;
@@ -970,7 +970,7 @@ function startPhaseCounterAttack() {
     if (game.threatsActive[i].isDefeated()) {
       console.debug(`Defeated ${game.threatsActive[i].name}`);
       // Remove the same threats from the grid
-      let threatIndex = getFriendlyIndexAt(game.threatsActive[i].x, game.threatsActive[i].y, -1);
+      let threatIndex = getFriendlyIndexAt(game.threatsActive[i].x, game.threatsActive[i].y, Threat.friendlyIndex);
       game.grid[game.threatsActive[i].x][game.threatsActive[i].y].splice(threatIndex, 1);
       game.threatsInactive.push(game.threatsActive.splice(i, 1));
       i--;
@@ -1016,7 +1016,7 @@ function startPhaseWrapUp() {
   // - At the end, discard all Tanks
   
   for (let c = 0; c < game.counterAttackCoordinates.length; c++) {
-    let discardedFriendlyIndex = getFriendlyIndexAt(game.counterAttackCoordinates[c].x, game.counterAttackCoordinates[c].y, 1);
+    let discardedFriendlyIndex = getFriendlyIndexAt(game.counterAttackCoordinates[c].x, game.counterAttackCoordinates[c].y, SquadMember.friendlyIndex);
     if (discardedFriendlyIndex >= 0) {
       let squadIndex = getSquadMemberIndexWithName(game.grid[game.counterAttackCoordinates[c].x][game.counterAttackCoordinates[c].y][discardedFriendlyIndex].name);
       console.debug(`${game.grid[game.counterAttackCoordinates[c].x][game.counterAttackCoordinates[c].y][discardedFriendlyIndex].name} did not make it...`);
@@ -1028,7 +1028,7 @@ function startPhaseWrapUp() {
     }
   }
   for (let c = 0; c < game.counterAttackCoordinatesDodgeable.length; c++) {
-    let discardedFriendlyIndex = getFriendlyIndexAt(game.counterAttackCoordinatesDodgeable[c].x, game.counterAttackCoordinatesDodgeable[c].y, 1);
+    let discardedFriendlyIndex = getFriendlyIndexAt(game.counterAttackCoordinatesDodgeable[c].x, game.counterAttackCoordinatesDodgeable[c].y, SquadMember.friendlyIndex);
     if (discardedFriendlyIndex >= 0 && game.grid[game.counterAttackCoordinatesDodgeable[c].x][game.counterAttackCoordinatesDodgeable[c].y][discardedFriendlyIndex].up) {
       let squadIndex = getSquadMemberIndexWithName(game.grid[game.counterAttackCoordinatesDodgeable[c].x][game.counterAttackCoordinatesDodgeable[c].y][discardedFriendlyIndex].name);
       console.debug(`${game.grid[game.counterAttackCoordinatesDodgeable[c].x][game.counterAttackCoordinatesDodgeable[c].y][discardedFriendlyIndex].name} ducked too late...`);
@@ -1130,8 +1130,8 @@ function mouseClicked(event) {
     // If this is checked later, swapping squad member positions isn't as easy
     for (let m = 0; m < game.moveCoordinates.length; m++) {
       if (clickX === game.moveCoordinates[m].x && clickY === game.moveCoordinates[m].y) {
-        let oldFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
-        let neighbourFriendlyIndex = getFriendlyIndexAt(clickX, clickY, 1);
+        let oldFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
+        let neighbourFriendlyIndex = getFriendlyIndexAt(clickX, clickY, SquadMember.friendlyIndex);
         if (neighbourFriendlyIndex >= 0) {
           // Switching squad members (this would only be possible when both are movable)
           console.debug(`Switched squad members at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} <--> ${clickX},${clickY}`);
@@ -1168,11 +1168,11 @@ function mouseClicked(event) {
   } else if (isPhaseAttack()) {
     for (let a = 0; a < game.attackCoordinates.length; a++) {
       if (clickX === game.attackCoordinates[a].x && clickY === game.attackCoordinates[a].y) {
-        let attackerFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
+        let attackerFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
         
         game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][attackerFriendlyIndex].attackCoordinate = new MapCoordinate(clickX, clickY);
         
-        let threatIndex = getFriendlyIndexAt(clickX, clickY, -1);
+        let threatIndex = getFriendlyIndexAt(clickX, clickY, Threat.friendlyIndex);
         game.grid[clickX][clickY][threatIndex].strengthOpposition += game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][attackerFriendlyIndex].strength;
         
         pressCancel();
@@ -1187,8 +1187,8 @@ function mouseClicked(event) {
       clickY >= 0 && clickY < game.grid[0].length) {
         console.debug(game.grid[clickX][clickY]);
         // Determine if a squad member was pressed on
-        let friendlyIndex = getFriendlyIndexAt(clickX, clickY, 1);
-        let threatIndex = getFriendlyIndexAt(clickX, clickY, -1);
+        let friendlyIndex = getFriendlyIndexAt(clickX, clickY, SquadMember.friendlyIndex);
+        let threatIndex = getFriendlyIndexAt(clickX, clickY, Threat.friendlyIndex);
         if (friendlyIndex >= 0) {
           if (isPhaseManeuver()) {
             // Prevent shown buttons from persisting from the previous selection
@@ -1296,7 +1296,7 @@ function drawGame() {
   // Calculate the friendly index of the selected square to access various class members & functions without having to recompute the value each time
   let selectedFriendlyIndex = -1;
   if (game.squadSelectedCoordinate) {
-    selectedFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, 1);
+    selectedFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
     
     // Highlight the selected squad member on the grid
     // This is done earlier than the threat highlighting because some elements can overlay this (e.g. counter-attack highlighting)
