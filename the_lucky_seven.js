@@ -1236,6 +1236,15 @@ function mouseClicked(event) {
   return false;
 }
 
+// Draws a square with respect to the GRID_START global variable, given a set of X and Y indexes.
+// Returns a MapCoordinate object of where the square was drawn.
+function drawSquareFromGridStart(x, y, squareWidth) {
+  // This assumes GRID_SQUARE_WIDTH == GRID_SQUARE_HEIGHT
+  const squareCoordinate = new MapCoordinate(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT));
+  square(squareCoordinate.x, squareCoordinate.y, squareWidth);
+  return squareCoordinate;
+}
+
 function drawGame() {
   background(COLOUR_MAPPING.BACKDROP_GAME);
   strokeWeight(2);
@@ -1252,7 +1261,7 @@ function drawGame() {
       } else {
         fill(COLOUR_MAPPING.CELL_ACCESSIBLE);
       }
-      square(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT), GRID_SQUARE_WIDTH);
+      drawSquareFromGridStart(x, y, GRID_SQUARE_WIDTH);
     }
   }
   
@@ -1294,16 +1303,14 @@ function drawGame() {
     noFill();
     stroke(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][selectedFriendlyIndex].colour);
     const squadMemberSquareWidth = game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][selectedFriendlyIndex].squareWidth;
-    const squadMemberSquareHeight = game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][selectedFriendlyIndex].squareHeight;
-    square(GRID_START.x + (game.squadSelectedCoordinate.x * GRID_SQUARE_WIDTH), GRID_START.y + (game.squadSelectedCoordinate.y * GRID_SQUARE_HEIGHT), squadMemberSquareWidth);
+    drawSquareFromGridStart(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, squadMemberSquareWidth);
   }
   
   // Draw movement squares
   for (let m = 0; m < game.moveCoordinates.length; m++) {
     fill(COLOUR_MAPPING.CELL_MOVEMENT);
     stroke(0);
-    const moveCoordinate = new MapCoordinate(GRID_START.x + (game.moveCoordinates[m].x * GRID_SQUARE_WIDTH), GRID_START.y + (game.moveCoordinates[m].y * GRID_SQUARE_HEIGHT));
-    square(moveCoordinate.x, moveCoordinate.y, GRID_SQUARE_WIDTH);
+    const moveCoordinate = drawSquareFromGridStart(game.moveCoordinates[m].x, game.moveCoordinates[m].y, GRID_SQUARE_WIDTH);
     if (selectedFriendlyIndex >= 0) {
       game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][selectedFriendlyIndex].drawSquadMemberCircle(moveCoordinate.x, moveCoordinate.y);
     }
@@ -1313,8 +1320,7 @@ function drawGame() {
   for (let a = 0; a < game.attackCoordinates.length; a++) {
     fill(COLOUR_MAPPING.CELL_ATTACK);
     stroke(0);
-    const attackCoordinate = new MapCoordinate(GRID_START.x + (game.attackCoordinates[a].x * GRID_SQUARE_WIDTH), GRID_START.y + (game.attackCoordinates[a].y * GRID_SQUARE_HEIGHT));
-    square(attackCoordinate.x, attackCoordinate.y, GRID_SQUARE_WIDTH);
+    const attackCoordinate = drawSquareFromGridStart(game.attackCoordinates[a].x, game.attackCoordinates[a].y, GRID_SQUARE_WIDTH);
     if (selectedFriendlyIndex >= 0) {
       game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][selectedFriendlyIndex].drawSquadMemberCross(attackCoordinate.x, attackCoordinate.y);
     }
@@ -1351,7 +1357,7 @@ function drawGame() {
     fill(COLOUR_MAPPING.CELL_ENCOUNTER);
     stroke(0);
     for (let tpc = 0; tpc < game.threatsPendingValidCoordinates.length && game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS; tpc++) {
-      square(GRID_START.x + (game.threatsPendingValidCoordinates[tpc].x * GRID_SQUARE_WIDTH), GRID_START.y + (game.threatsPendingValidCoordinates[tpc].y * GRID_SQUARE_HEIGHT), GRID_SQUARE_WIDTH);
+      drawSquareFromGridStart(game.threatsPendingValidCoordinates[tpc].x, game.threatsPendingValidCoordinates[tpc].y, GRID_SQUARE_WIDTH);
     }
   } else if (isPhaseCounterAttack()) {
     // Draw squares that threats will be attacking
@@ -1366,7 +1372,7 @@ function drawGame() {
       if (counterAttackLookup.indexOf(counterAttackKey) < 0) {
         counterAttackLookup.push(counterAttackKey);
         image(IMAGE_MAPPING.ICON_CROSSHAIR, counterAttackCoordinate.x, counterAttackCoordinate.y, GRID_SQUARE_WIDTH_INNER, GRID_SQUARE_HEIGHT_INNER);
-        square(GRID_START.x + (counterAttacks[c].x * GRID_SQUARE_WIDTH), GRID_START.y + (counterAttacks[c].y * GRID_SQUARE_HEIGHT), GRID_SQUARE_WIDTH);
+        drawSquareFromGridStart(counterAttacks[c].x, counterAttacks[c].y, GRID_SQUARE_WIDTH);
       }
       
     }
@@ -1377,7 +1383,7 @@ function drawGame() {
   for (let ts = 0; ts < game.threatsSelected.length; ts++) {
     noFill();
     stroke(COLOUR_MAPPING.HIGHLIGHT_THREAT);
-    square(GRID_START.x + (game.threatsSelected[ts].x * GRID_SQUARE_WIDTH), GRID_START.y + (game.threatsSelected[ts].y * GRID_SQUARE_HEIGHT), GRID_SQUARE_WIDTH);
+    drawSquareFromGridStart(game.threatsSelected[ts].x, game.threatsSelected[ts].y, GRID_SQUARE_WIDTH);
   }
   
   // Show updated UI elements which may need to reflect the current phase
