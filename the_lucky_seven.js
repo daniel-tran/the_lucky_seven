@@ -302,7 +302,7 @@ function canFlipUp(x, y, z) {
     return true;
   }
   
-  let adjacentLeaders = filterAdjacentFriendliesAt(x, y, true, 1, true);
+  let adjacentLeaders = filterAdjacentFriendliesAt(x, y, true, SquadMember.type["The Leader"], true);
   if (adjacentLeaders.length > 0) {
     console.debug("The Leader is nearby! Able to flip up from a diagonal position in addition to the normal flip up rules.");
     return true;
@@ -376,7 +376,7 @@ function getMovementCoordinates(startX, startY) {
   let coordinates = getAdjacentMapCoordinates(startX, startY, false, true);
   let coordinatesValid = [];
   for (let c = 0; c < coordinates.length; c++) {
-    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, -1)) {
+    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, Threat.friendlyIndex)) {
       // Space is occupied by a threat
       console.debug("Space is occupied by a threat");
       continue;
@@ -400,8 +400,8 @@ function getMovementCoordinates(startX, startY) {
           // Since the start cell and relative coordinate are valid positions in the grid,
           // it can be inferred that the adjacent coordinates shared by them are also valid
           // (unless a non-qualdrilateral grid is allowed, then this would have to be revisited)
-          if (containsFriendlyIndex(startX + relativeMapCoordinate.x, startY, -1) &&
-              containsFriendlyIndex(startX, startY + relativeMapCoordinate.y, -1)) {
+          if (containsFriendlyIndex(startX + relativeMapCoordinate.x, startY, Threat.friendlyIndex) &&
+              containsFriendlyIndex(startX, startY + relativeMapCoordinate.y, Threat.friendlyIndex)) {
                 console.debug("Space is blocked off by adjacent threats");
                 continue;
               }
@@ -416,7 +416,7 @@ function getAttackCoordinates(startX, startY, includeDiagonals) {
   let coordinates = getAdjacentMapCoordinates(startX, startY, false, includeDiagonals);
   let coordinatesValid = [];
   for (let c = 0; c < coordinates.length; c++) {
-    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, -1)) {
+    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, Threat.friendlyIndex)) {
       console.debug(`${coordinates[c].x}, ${coordinates[c].y} can be attacked`);
       coordinatesValid.push(coordinates[c]);
     }
@@ -727,6 +727,7 @@ function setupNewGame() {
           },
         },
       },
+      // These map to the values of each threat type
       threats: {
         0: {
           card: `${pathPrefixCards}/tank.png`,
@@ -773,7 +774,7 @@ function setupNewGame() {
     // First column is reserved for tanks, so this corresponds to the column index
     for (let threatCount = CELL_RESERVATION.x; threatCount <= game.settings.THREAT_COUNT_MAPPING[threatType]; threatCount++) {
       let threatCountAdjusted = threatCount % (MAX_MAP_CARD_VALUE - 1);
-      if (threatType === 0) {
+      if (threatType === Threat.type["Tank"]) {
         // Remember that Tanks are special because they always spawn in the first column
         threatCountAdjusted = 0;
       } else if (threatCountAdjusted <= 0) {
@@ -882,7 +883,7 @@ function startPhaseManeuver() {
   game.threatsPendingValidCoordinates = [];
   // Remove the required active threats
   for (let i = 0; i < game.threatsActive.length; i++) {
-    if (game.threatsActive[i].type === 5) {
+    if (game.threatsActive[i].type === Threat.type["Mortar"]) {
       // Activate any threats that take instant effect in this phase
       activateMortar(game.threatsActive[i].x, game.threatsActive[i].y, true);
       game.threatsInactive.push(game.threatsActive.splice(i, 1));
@@ -892,7 +893,7 @@ function startPhaseManeuver() {
   // Remove the same threats from the grid
   for (let x = 0; x < game.grid.length; x++) {
     for (let y = 0; y < game.grid[x].length; y++) {
-      let mortarIndex = containsThreatType(x, y, 5);
+      let mortarIndex = containsThreatType(x, y, Threat.type["Mortar"]);
       if (mortarIndex >= 0) {
         console.debug(`Removing mortar at ${x},${y},${mortarIndex}`);
         game.grid[x][y].splice(mortarIndex, 1);
@@ -900,7 +901,7 @@ function startPhaseManeuver() {
       }
       
       // While the threat X,Y coordinates are calculated, apply flare logic here as well
-      let flareIndex = containsThreatType(x, y, 4);
+      let flareIndex = containsThreatType(x, y, Threat.type["Flare"]);
       if (flareIndex >= 0) {
         let friendlyIndex = getFriendlyIndexAt(x, y, SquadMember.friendlyIndex);
         if (friendlyIndex >= 0) {
@@ -935,7 +936,7 @@ function startPhaseAttack() {
   }
   // Remove the required active threats
   for (let i = 0; i < game.threatsActive.length; i++) {
-    if (game.threatsActive[i].type === 4) {
+    if (game.threatsActive[i].type === Threat.type["Flare"]) {
       game.threatsInactive.push(game.threatsActive.splice(i, 1));
       i--;
     }
@@ -943,7 +944,7 @@ function startPhaseAttack() {
   // Remove the same threats from the grid
   for (let x = 0; x < game.grid.length; x++) {
     for (let y = 0; y < game.grid[x].length; y++) {
-      let flareIndex = containsThreatType(x, y, 4);
+      let flareIndex = containsThreatType(x, y, Threat.type["Flare"]);
       if (flareIndex >= 0) {
         console.debug(`Removing flare at ${x},${y},${flareIndex}`);
         game.grid[x][y].splice(flareIndex, 1);
@@ -983,14 +984,14 @@ function startPhaseCounterAttack() {
         continue;
       }
       switch(game.threatsActive[i].type) {
-        case 1:
-        case 2:
+        case Threat.type["Infantry 1"]:
+        case Threat.type["Infantry 2"]:
           game.counterAttackCoordinates.push(...getAdjacentMapCoordinates(game.threatsActive[i].x, game.threatsActive[i].y, false, false));
           break;
-        case 3:
+        case Threat.type["Machine Gun"]:
           game.counterAttackCoordinatesDodgeable.push(...getAdjacentMapCoordinates(game.threatsActive[i].x, game.threatsActive[i].y, false, false));
           break;
-        case 0:
+        case Threat.type["Tank"]:
           for (let t = CELL_RESERVATION.x; t <= game.grid.length - 1; t++) {
             game.counterAttackCoordinatesDodgeable.push(new MapCoordinate(t, game.threatsActive[i].y));
           }
@@ -1046,19 +1047,20 @@ function startPhaseWrapUp() {
   game.counterAttackCoordinatesDodgeable = [];
   // Remove the required active threats
   for (let i = 0; i < game.threatsActive.length; i++) {
-    if (game.threatsActive[i].type === 0) {
+    if (game.threatsActive[i].type === Threat.type["Tank"]) {
       game.threatsInactive.push(game.threatsActive.splice(i, 1));
       i--;
     }
   }
   // Remove the same threats from the grid
-  let x = 0;
-  for (let y = 0; y < game.grid[0].length; y++) {
-    // Simplify the loop under the premise that Tanks only occupt the first column 
-    let tankIndex = containsThreatType(x, y, 0);
-    if (tankIndex >= 0) {
-      console.debug(`Removing tank at ${x},${y},${tankIndex}`);
-      game.grid[x][y].splice(tankIndex, 1);
+  for (let x = 0; x < CELL_RESERVATION.x; x++) {
+    for (let y = 0; y < game.grid[0].length; y++) {
+      // Simplify the loop under the premise that Tanks only occupt the first column 
+      let tankIndex = containsThreatType(x, y, Threat.type["Tank"]);
+      if (tankIndex >= 0) {
+        console.debug(`Removing tank at ${x},${y},${tankIndex}`);
+        game.grid[x][y].splice(tankIndex, 1);
+      }
     }
   }
      
@@ -1282,7 +1284,7 @@ function drawGame() {
           
           // ABILITY: The Joker can reduce the strength of adjacent threats
           // This has to be done in draw() because the prerequisites required for the bonus could be lost in any phase
-          let adjacentJokers = filterAdjacentFriendliesAt(x, y, false, 64, true);
+          let adjacentJokers = filterAdjacentFriendliesAt(x, y, false, SquadMember.type["The Joker"], true);
           if (adjacentJokers.length > 0) {
             game.grid[x][y][z].setStrengthReduction();
           } else {
@@ -1495,6 +1497,7 @@ function preload() {
     "GAME_WIN": loadSound("sounds/misc/game_win.wav"),
     "SQUAD_MOVEMENT": loadSound("sounds/misc/squad_movement.wav"),
     "SELECT_THREAT": {
+      // These map to the values of each threat type
       // Threats make a noise regardless of the phase, as their presence is relevant in all phases
       0: [loadSound("sounds/threats/tank.wav")],
       1: [loadSound("sounds/threats/infantry_1.wav")],

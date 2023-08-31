@@ -1,5 +1,13 @@
 class Threat {
   static friendlyIndex = -1;
+  static type = {
+    "Tank": 0,
+    "Infantry 1": 1,
+    "Infantry 2": 2,
+    "Machine Gun": 3,
+    "Flare": 4,
+    "Mortar": 5,
+  };
   
   constructor(type, x, y) {
     this.type = type;
@@ -15,37 +23,37 @@ class Threat {
     
     let description = [];
     switch (type) {
-      case 0:
+      case Threat.type["Tank"]:
         this.name = "Tank";
         description = ["Discard all squad members in this row that are up.", "Then discard this card."];
         this.strength = 9;
         this.canOverlapWithSquad = true;
         break;
-      case 1:
+      case Threat.type["Infantry 1"]:
         this.name = "Infantry";
         description = ["Discard all adjacent squad members."];
         this.strength = 1;
         this.canOverlapWithSquad = false;
         break;
-      case 2:
+      case Threat.type["Infantry 2"]:
         this.name = "Infantry";
         description = ["Discard all adjacent squad members."];
         this.strength = 2;
         this.canOverlapWithSquad = false;
         break;
-      case 3:
+      case Threat.type["Machine Gun"]:
         this.name = "Machine Gun";
         description = ["Discard all adjacent squad members that are up."];
         this.strength = 3;
         this.canOverlapWithSquad = false;
         break;
-      case 4:
+      case Threat.type["Flare"]:
         this.name = "Flare";
         description = ["The squad member here may not move.", "Other squad members may not move here.", "Discard this card at the end of the phase."];
         this.strength = 0;
         this.canOverlapWithSquad = true;
         break;
-      case 5:
+      case Threat.type["Mortar"]:
         this.name = "Mortar";
         description = ["Flip down and rotate the squad member here.", "Then flip down all adjacent squad members.", "Finally, discard this card."];
         this.strength = 0;
@@ -103,6 +111,6 @@ class Threat {
   }
   
   isFixedColumn() {
-    return this.type === 0;
+    return this.type === Threat.type["Tank"];
   }
 }

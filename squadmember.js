@@ -1,5 +1,11 @@
 class SquadMember {
     static friendlyIndex = 1;
+    // Since squad members can possess multiple abilities, this is just a helpful reference to obtain the specific
+    // type value associated with a certain ability. Squad member names are keyed as per the original game.
+    static type = {
+      "The Leader": 1,
+      "The Joker": 64,
+    };
 
     constructor(name, strength, colour, type) {
         this.name = name;
