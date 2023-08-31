@@ -32,8 +32,11 @@ function getIconImageForSquadMember(x, y, z) {
 }
 
 function playSound(sound) {
-  sound.playMode("restart");
-  sound.play();
+  // Don't play the sound if it hasn't loaded yet
+  if (sound) {
+    sound.playMode("restart");
+    sound.play();
+  }
 }
 
 function playSoundFromList(soundList) {
