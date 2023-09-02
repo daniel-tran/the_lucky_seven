@@ -5,7 +5,8 @@
   "main": "the_lucky_seven.js",
   "scripts": {
     "start": "http-server -d false -p 777",
-    "dev": "npm run start -- -c-1"
+    "dev": "npm run start -- -c-1",
+    "test": "configure_tests.bat && jest --coverage"
   },
   "keywords": [
     "zachtronics"
@@ -14,5 +15,8 @@
   "license": "MIT",
   "dependencies": {
     "http-server": "^14.1.1"
+  },
+  "devDependencies": {
+    "jest": "^29.6.4"
   }
 }
