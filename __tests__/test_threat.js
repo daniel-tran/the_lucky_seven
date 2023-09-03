@@ -1,4 +1,4 @@
-const { Threat } = require('./threat.js.testclass');
+const { Threat } = require("../threat.js");
 
 describe("Threat unit tests", () => {
   test("Test constructor", () => {

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "http-server -d false -p 777",
     "dev": "npm run start -- -c-1",
-    "test": "configure_tests.bat && jest --coverage"
+    "test": "jest --coverage"
   },
   "keywords": [
     "zachtronics"

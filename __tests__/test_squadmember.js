@@ -1,4 +1,4 @@
-const { SquadMember } = require('./squadmember.js.testclass');
+const { SquadMember } = require("../squadmember.js");
 
 describe("Squad member unit tests", () => {
   test("Test constructor", () => {

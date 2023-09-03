@@ -225,3 +225,8 @@ class SquadMember {
       return this.colourBorderDown;
     }
 }
+
+// Module exports should only be set when running unit tests, as this causes a console error when running the sketch
+if (typeof exports !== "undefined") {
+  module.exports = { SquadMember };
+}
