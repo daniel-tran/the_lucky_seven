@@ -250,3 +250,8 @@ function generateCardImage(imageX, imageY, imagePath, imageAltText, isActive) {
   }
   return uiCardImage;
 }
+
+// Module exports should only be set when running unit tests, as this causes a console error when running the sketch
+if (typeof exports !== "undefined") {
+  module.exports = { findMapCardWithValue, shuffleListNonDestructively };
+}
