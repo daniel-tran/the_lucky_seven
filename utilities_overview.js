@@ -134,3 +134,8 @@ function configureSettingsDefault() {
   document.getElementById("ui-settings-option-9").value = "6";
   document.getElementById("ui-settings-option-10").value = "4";
 }
+
+// Module exports should only be set when running unit tests, as this causes a console error when running the sketch
+if (typeof exports !== "undefined") {
+  module.exports = { configureSettingsDefault, normaliseSettingNumber, applySettings, showSettings, closeSettings, toggleSettings };
+}
