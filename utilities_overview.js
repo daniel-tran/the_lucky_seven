@@ -88,7 +88,7 @@ function normaliseSettingNumber(fieldElementId) {
   return fieldElementValue;
 }
 
-function applySettings() {
+function applySettings(shouldResetGame = true) {
   sessionStorage.setItem(SESSION_STORAGE_KEY_SETTINGS, JSON.stringify(
   {
     // The total number of squad members subtracted when the game starts
@@ -118,7 +118,9 @@ function applySettings() {
     SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS: document.getElementById("ui-settings-option-2").checked,
   }));
   closeSettings();
-  pressGameReset();
+  if (shouldResetGame) {
+    pressGameReset();
+  }
 }
 
 function configureSettingsDefault() {

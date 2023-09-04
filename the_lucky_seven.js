@@ -530,77 +530,11 @@ function resolveThreatOverlap(threatToBePlaced, column, row) {
 }
 
 function setup() {
-  setupNewGame();
+  setupUI();
   game.menuIndex = MENU_MAPPING.OVERVIEW;
 }
 
-function setupNewGame() {
-  // This is the full list of squad members
-  // This is defined here instead of the global scope to fix an issue where constantly pressing reset preserves the squad member's down status
-  const squadBench = [
-    new SquadMember("The Leader", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 1),
-    new SquadMember("The Athlete", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 2),
-    new SquadMember("The Mouse", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 4),
-    new SquadMember("The Natural", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 8),
-    new SquadMember("The Pacifist", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 16),
-    new SquadMember("The Hammer", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
-    new SquadMember("The Anvil", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
-    new SquadMember("The Joker", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 80), // 64 + 16, since they have 2 abilities
-  ];  
-  game = {
-    // This is the board represented as a 3D array because some cells can have multiple cards occupying it
-    grid: [],
-    // This is the phase indicator
-    phase: 0,
-    // This is the ordered list of playable squad members
-    squad: [],
-    // This is the coordinate of the currently selected squad member
-    squadSelectedCoordinate: null,
-    // Indicates whether the selected squad member can flip up
-    squadSelectedCoordinateCanFlipUp: false,
-    // The list of map cards on the X axis used mainly during the intial setup
-    mapcardsX: [],
-    // The list of map cards on the Y axis used mainly during the intial setup
-    mapcardsY: [],
-    // The list of all threats that will be played in the game
-    threats: [],
-    // The list of pending threats
-    threatsPending: [],
-    threatsPendingValidCoordinates: [],
-    // The list of active threats
-    threatsActive: [],
-    // The list of defeated threats
-    threatsInactive: [],
-    // The list of selected threats
-    threatsSelected: [],
-    // The list of valid coordinates that a squad member can move to
-    moveCoordinates: [],
-    // The list of valid coordinates that a squad member can attack
-    attackCoordinates: [],
-    // All possible coordinates that all active threats can attack and cannot be dodged
-    counterAttackCoordinates: [],
-    // All possible coordinates that all active threats can attack and can be dodged
-    counterAttackCoordinatesDodgeable: [],
-    // The number of turns before the game ends once all the threats have been deployed
-    finalTurnsRemaining: 2, // EXTRA: When all threats are played, player gets +1 extra final turns in addition to the standard amount for each lost squad member
-    isInFinalTurns: false,
-    // The current turn number
-    turn: 1,
-    // Indicates the game outcome. < 0 = Lose, 0 = In progress, > 0 = Win
-    outcome: 0,
-    // Indicates which page the player is looking at
-    menuIndex: MENU_MAPPING.GAME,
-    // The total score the player is able to achieve if they win the game
-    finalScore: 5,
-    // Not part of the original game, but the final score decreases if the final turns
-    // take longer than expected to finish
-    finalTurnsPar: 2,
-    // The decrement used to punish players who require more than finalTurnsPar to finish the game
-    finalTurnPenalty: -1,
-    //
-    settings: JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY_SETTINGS)),
-  };
-  
+function setupUI() {
   // If this function is called as a result of a game reset, the old UI elements need to be
   // manually removed before the new ones are regenerated.
   for (let b = document.getElementsByClassName("ui-element").length - 1; b >= 0 ; b--) {
@@ -756,6 +690,80 @@ function setupNewGame() {
       },
     },
   };
+
+  // Don't use displayWidth and displayHeight, as they result in excessive empty space
+  createCanvas(960, 580);
+}
+
+function setupNewGame() {
+  // This is the full list of squad members
+  // This is defined here instead of the global scope to fix an issue where constantly pressing reset preserves the squad member's down status
+  const squadBench = [
+    new SquadMember("The Leader", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 1),
+    new SquadMember("The Athlete", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 2),
+    new SquadMember("The Mouse", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 4),
+    new SquadMember("The Natural", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 8),
+    new SquadMember("The Pacifist", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 16),
+    new SquadMember("The Hammer", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
+    new SquadMember("The Anvil", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
+    new SquadMember("The Joker", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 80), // 64 + 16, since they have 2 abilities
+  ];
+  game = {
+    // This is the board represented as a 3D array because some cells can have multiple cards occupying it
+    grid: [],
+    // This is the phase indicator
+    phase: 0,
+    // This is the ordered list of playable squad members
+    squad: [],
+    // This is the coordinate of the currently selected squad member
+    squadSelectedCoordinate: null,
+    // Indicates whether the selected squad member can flip up
+    squadSelectedCoordinateCanFlipUp: false,
+    // The list of map cards on the X axis used mainly during the intial setup
+    mapcardsX: [],
+    // The list of map cards on the Y axis used mainly during the intial setup
+    mapcardsY: [],
+    // The list of all threats that will be played in the game
+    threats: [],
+    // The list of pending threats
+    threatsPending: [],
+    threatsPendingValidCoordinates: [],
+    // The list of active threats
+    threatsActive: [],
+    // The list of defeated threats
+    threatsInactive: [],
+    // The list of selected threats
+    threatsSelected: [],
+    // The list of valid coordinates that a squad member can move to
+    moveCoordinates: [],
+    // The list of valid coordinates that a squad member can attack
+    attackCoordinates: [],
+    // All possible coordinates that all active threats can attack and cannot be dodged
+    counterAttackCoordinates: [],
+    // All possible coordinates that all active threats can attack and can be dodged
+    counterAttackCoordinatesDodgeable: [],
+    // The number of turns before the game ends once all the threats have been deployed
+    finalTurnsRemaining: 2, // EXTRA: When all threats are played, player gets +1 extra final turns in addition to the standard amount for each lost squad member
+    isInFinalTurns: false,
+    // The current turn number
+    turn: 1,
+    // Indicates the game outcome. < 0 = Lose, 0 = In progress, > 0 = Win
+    outcome: 0,
+    // Indicates which page the player is looking at
+    menuIndex: MENU_MAPPING.GAME,
+    // The total score the player is able to achieve if they win the game
+    finalScore: 5,
+    // Not part of the original game, but the final score decreases if the final turns
+    // take longer than expected to finish
+    finalTurnsPar: 2,
+    // The decrement used to punish players who require more than finalTurnsPar to finish the game
+    finalTurnPenalty: -1,
+    //
+    settings: JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY_SETTINGS)),
+  };
+
+  setupUI();
+
   // Call this function to avoid having the turn label defined in two spearate locations
   setTurnLabelText();
 
@@ -821,10 +829,6 @@ function setupNewGame() {
   activateMortar(findMapCardWithValue(game.mapcardsX, c) + mapCardOffset.x,
                  findMapCardWithValue(game.mapcardsY, c) + mapCardOffset.y,
                  isCardIndexExceeded);
-  
-  // Don't use displayWidth and displayHeight, as they result in excessive empty space
-  createCanvas(960, 580);
-  
   
   startPhaseEncounter();
   snapshotGameState();
@@ -1626,7 +1630,8 @@ function preload() {
   if (!sessionStorage.getItem(SESSION_STORAGE_KEY_SETTINGS)) {
     // Set the default settings and store them in the browser storage to be persisted
     configureSettingsDefault();
-    applySettings();
+    // Only invoking applySettings() to set the initial session storage values
+    applySettings(false);
   }
 }
 
