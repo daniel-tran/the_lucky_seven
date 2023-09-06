@@ -1242,11 +1242,16 @@ function mouseClicked(event) {
   return false;
 }
 
+// Returns a MapCoordinate object with X, Y offsets applied relative to GRID_START
+function getGridCoordinate(x, y) {
+  return new MapCoordinate(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT));
+}
+
 // Draws a square with respect to the GRID_START global variable, given a set of X and Y indexes.
 // Returns a MapCoordinate object of where the square was drawn.
 function drawSquareFromGridStart(x, y, squareWidth) {
   // This assumes GRID_SQUARE_WIDTH == GRID_SQUARE_HEIGHT
-  const squareCoordinate = new MapCoordinate(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT));
+  const squareCoordinate = getGridCoordinate(x, y);
   square(squareCoordinate.x, squareCoordinate.y, squareWidth);
   return squareCoordinate;
 }
@@ -1275,8 +1280,9 @@ function drawGame() {
   for (let x = 0; x < game.grid.length; x++) {
     for (let y = 0; y < game.grid[x].length; y++) {
       for (let z = 0; z < game.grid[x][y].length; z++) {
+        const elementCoordinate = getGridCoordinate(x, y);
         if (game.grid[x][y][z].isFriendly > 0) {
-          game.grid[x][y][z].drawSquadMember(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT), getIconImageForSquadMember(x, y, z));
+          game.grid[x][y][z].drawSquadMember(elementCoordinate.x, elementCoordinate.y, getIconImageForSquadMember(x, y, z));
           continue;
         } else if (game.grid[x][y][z].isFriendly < 0) {
           // Show a different icon if the threat is marked for defeat
@@ -1284,7 +1290,7 @@ function drawGame() {
           if (game.grid[x][y][z].isDefeated()) {
             iconImage = IMAGE_MAPPING.ICON_SKULL;
           }
-          game.grid[x][y][z].drawThreat(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT), squadWidth, iconImage);
+          game.grid[x][y][z].drawThreat(elementCoordinate.x, elementCoordinate.y, squadWidth, iconImage);
           
           // ABILITY: The Joker can reduce the strength of adjacent threats
           // This has to be done in draw() because the prerequisites required for the bonus could be lost in any phase
@@ -1335,8 +1341,9 @@ function drawGame() {
   // Draw squad member items with increased priority in layering
   for (let s = 0; s < game.squad.length; s++) {
     if (game.squad[s].isAttacking()) {
-      game.squad[s].drawAttackLine(GRID_START.x + (game.squad[s].x * GRID_SQUARE_WIDTH), GRID_START.y + (game.squad[s].y * GRID_SQUARE_HEIGHT),
-                              GRID_START.x + (game.squad[s].attackCoordinate.x * GRID_SQUARE_WIDTH), GRID_START.y + (game.squad[s].attackCoordinate.y * GRID_SQUARE_HEIGHT));
+      const squadMemberCoordinate = getGridCoordinate(game.squad[s].x, game.squad[s].y);
+      const squadMemberAttackCoordinate = getGridCoordinate(game.squad[s].attackCoordinate.x, game.squad[s].attackCoordinate.y);
+      game.squad[s].drawAttackLine(squadMemberCoordinate.x, squadMemberCoordinate.y, squadMemberAttackCoordinate.x, squadMemberAttackCoordinate.y);
     }
     
     // While there's a reference to a specific squad member, apply Pacifist bonus logic here
@@ -1372,7 +1379,7 @@ function drawGame() {
     let counterAttacks = game.counterAttackCoordinates.concat(game.counterAttackCoordinatesDodgeable);
     let counterAttackLookup = [];
     for (let c = 0; c < counterAttacks.length; c++) {
-      const counterAttackCoordinate = new MapCoordinate(GRID_START.x + (counterAttacks[c].x * GRID_SQUARE_WIDTH), GRID_START.y + (counterAttacks[c].y * GRID_SQUARE_HEIGHT));
+      const counterAttackCoordinate = getGridCoordinate(counterAttacks[c].x, counterAttacks[c].y);
       const counterAttackKey = `${counterAttackCoordinate.x},${counterAttackCoordinate.y}`;
       // Avoid drawing the same icon and colour over the same square by checking it against a list of known counter-attack locations
       if (counterAttackLookup.indexOf(counterAttackKey) < 0) {
