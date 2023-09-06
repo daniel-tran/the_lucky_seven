@@ -150,7 +150,7 @@ function getAllThreatsAt(column, row) {
 }
 
 function canThreatMoveToNewColumn(threat, x, y) {
-  if (x > game.grid.length || x < 0) {
+  if (x > game.grid.length || x < 0 || !game.grid[x]) {
     // The Y coordinate is handled outside of this function and doesn't need to be checked
     console.debug(`${threat.name} cannot move to ${x},${y} because it is out of bounds`);
     return false;
