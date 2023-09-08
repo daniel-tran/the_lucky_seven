@@ -1504,6 +1504,7 @@ function preload() {
     "BUTTON_UNDO": loadSound("sounds/misc/game_undo.wav"),
     "BUTTON_FLIP_UP": loadSound("sounds/misc/flip_up.wav"),
     "BUTTON_FLIP_DOWN": loadSound("sounds/misc/flip_down.wav"),
+    "BUTTON_SETTINGS": loadSound("sounds/misc/settings.wav"),
     "GAME_LOSE": loadSound("sounds/misc/game_lose.wav"),
     "GAME_WIN": loadSound("sounds/misc/game_win.wav"),
     "SQUAD_MOVEMENT": loadSound("sounds/misc/squad_movement.wav"),

@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  */
-const { configureSettingsDefault, normaliseSettingNumber, applySettings, showSettings, closeSettings, toggleSettings } = require("../utilities_overview.js");
+const { configureSettingsDefault, normaliseSettingNumber, applySettings, closeSettings, toggleSettings } = require("../utilities_overview.js");
 
 // This section was sourced from https://dev.to/snowleo208/things-i-learned-after-writing-tests-for-js-and-html-page-4lja
 // It loads the contents of a HTML page without the attached JavaScript

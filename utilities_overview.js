@@ -51,6 +51,10 @@ function closeSettings() {
 }
 
 function showSettings() {
+  if (document.getElementById("ui-settings-prompt").style.display === "block") {
+    return;
+  }
+  playSound(SOUND_MAPPING.BUTTON_SETTINGS);
   document.getElementById("ui-settings-prompt").style.display = "block";
   // Prefill settings upon showing to automatically undo any changes if the user presses Cancel
   let storedSettings = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY_SETTINGS));
@@ -139,5 +143,5 @@ function configureSettingsDefault() {
 
 // Module exports should only be set when running unit tests, as this causes a console error when running the sketch
 if (typeof exports !== "undefined") {
-  module.exports = { configureSettingsDefault, normaliseSettingNumber, applySettings, showSettings, closeSettings, toggleSettings };
+  module.exports = { configureSettingsDefault, normaliseSettingNumber, applySettings, closeSettings, toggleSettings };
 }
