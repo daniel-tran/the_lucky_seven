@@ -168,6 +168,118 @@ function canThreatMoveToNewColumn(threat, x, y) {
   return canMoveToNewCell;
 }
 
+function canFlipUp(x, y, z) {
+  if (game.grid[x][y][z].up) {
+    console.debug(`Not able to flip up because ${game.grid[x][y][z].name} is already up`);
+    return false;
+  }
+  if (game.grid[x][y][z].rotated) {
+    console.debug(`Not able to flip up because ${game.grid[x][y][z].name} is rotated`);
+    return false;
+  }
+  
+  if (game.grid[x][y][z].canFlipUpWithoutSquadMember()) {
+    console.debug("The Leader can flip up by themselves");
+    return true;
+  }
+  
+  let adjacentLeaders = filterAdjacentFriendliesAt(x, y, true, SquadMember.type["The Leader"], true);
+  if (adjacentLeaders.length > 0) {
+    console.debug("The Leader is nearby! Able to flip up from a diagonal position in addition to the normal flip up rules.");
+    return true;
+  }
+  
+  let adjacentSquares = getAdjacentMapCoordinates(x, y, false, false);
+  for (let i = 0; i < adjacentSquares.length; i++) {
+    console.debug(`Checking ${adjacentSquares[i].x},${adjacentSquares[i].y}`);
+    let adjacentFriendlyIndex = getFriendlyIndexAt(adjacentSquares[i].x, adjacentSquares[i].y, SquadMember.friendlyIndex);
+    if (adjacentFriendlyIndex >= 0 && game.grid[adjacentSquares[i].x][adjacentSquares[i].y][adjacentFriendlyIndex].up) {
+      return true;
+    }
+  }
+  console.debug("Not able to flip up because there is no adjacent squad member who is up");
+  return false;
+}
+
+function getAdjacentMapCoordinates(startX, startY, includeSelf, includeDiagonals) {
+  let coordinates = [
+    new MapCoordinate(startX, startY - 1),
+    new MapCoordinate(startX + 1, startY),
+    new MapCoordinate(startX, startY + 1),
+    new MapCoordinate(startX - 1, startY),
+  ];
+  if (includeSelf) {
+    coordinates.push(new MapCoordinate(startX, startY));
+  }
+  if (includeDiagonals) {
+    coordinates.push(new MapCoordinate(startX + 1, startY - 1),
+                     new MapCoordinate(startX + 1, startY + 1),
+                     new MapCoordinate(startX - 1, startY + 1),
+                     new MapCoordinate(startX - 1, startY - 1));
+  }
+  for (let c = 0; c < coordinates.length; c++) {
+    // Remember that the first column and row is reserved
+    if (coordinates[c].x <= 0 || coordinates[c].x >= game.grid.length ||
+        coordinates[c].y <= 0 || coordinates[c].y >= game.grid[0].length) {
+          coordinates.splice(c, 1);
+          c--;
+        }
+  }
+  return coordinates;
+}
+
+function getMovementCoordinates(startX, startY) {
+  let coordinates = getAdjacentMapCoordinates(startX, startY, false, true);
+  let coordinatesValid = [];
+  for (let c = 0; c < coordinates.length; c++) {
+    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, Threat.friendlyIndex)) {
+      // Space is occupied by a threat
+      console.debug("Space is occupied by a threat");
+      continue;
+    }
+    let friendlyIndex = getFriendlyIndexAt(coordinates[c].x, coordinates[c].y, SquadMember.friendlyIndex);
+    if (friendlyIndex >= 0 && (!game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].isMovable() || !game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].up)) {
+      // Space is occupied by a immovable squad member (remember that squad members who are down cannot move at all)
+      console.debug("Space is occupied by a immovable squad member");
+      continue;
+    }
+    // Exclude diagonal spaces that are cut off by threats
+    let relativeMapCoordinate = getRelativeMapCoordinate(startX, startY, coordinates[c].x, coordinates[c].y);
+    if ((relativeMapCoordinate.x === -1 && relativeMapCoordinate.y === -1) ||
+        (relativeMapCoordinate.x === 1 && relativeMapCoordinate.y === -1) ||
+        (relativeMapCoordinate.x === -1 && relativeMapCoordinate.y === 1) ||
+        (relativeMapCoordinate.x === 1 && relativeMapCoordinate.y === 1)) {
+          console.debug(`Testing diagonal square on ${coordinates[c].x},${coordinates[c].y}`);
+          console.debug(`using vector ${relativeMapCoordinate.x},${relativeMapCoordinate.y}`);
+          console.debug(`which means ${startX + relativeMapCoordinate.x},${startY}`);
+          console.debug(`and ${startX},${startY + relativeMapCoordinate.y}`);
+          // Since the start cell and relative coordinate are valid positions in the grid,
+          // it can be inferred that the adjacent coordinates shared by them are also valid
+          // (unless a non-qualdrilateral grid is allowed, then this would have to be revisited)
+          if (containsFriendlyIndex(startX + relativeMapCoordinate.x, startY, Threat.friendlyIndex) &&
+              containsFriendlyIndex(startX, startY + relativeMapCoordinate.y, Threat.friendlyIndex)) {
+                console.debug("Space is blocked off by adjacent threats");
+                continue;
+              }
+        }
+    
+    coordinatesValid.push(coordinates[c]);
+  }
+  return coordinatesValid;
+}
+
+function getAttackCoordinates(startX, startY, includeDiagonals) {
+  let coordinates = getAdjacentMapCoordinates(startX, startY, false, includeDiagonals);
+  let coordinatesValid = [];
+  for (let c = 0; c < coordinates.length; c++) {
+    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, Threat.friendlyIndex)) {
+      console.debug(`${coordinates[c].x}, ${coordinates[c].y} can be attacked`);
+      coordinatesValid.push(coordinates[c]);
+    }
+  }
+  return coordinatesValid;
+}
+
 // Returns a list of adjacent SquadMember objects at the given coordinates
 function getAdjacentFriendliesAt(column, row, includeDiagonals) {
   let adjacentSquares = getAdjacentMapCoordinates(column, row, false, includeDiagonals);
@@ -249,6 +361,30 @@ function generateCardImage(imageX, imageY, imagePath, imageAltText, isActive) {
     uiCardImage.hide();
   }
   return uiCardImage;
+}
+
+function updateCardDescription(description, imagePath, cardDescriptionIndex, frameColour, useGrayscale) {
+  // Only update the HTML if there is an actual change (includes toggling of the same description after pressing an empty square)
+  // The same logic could be independently applied to the card image too, but the image is usually tied to the description anyway
+  if (ui.cardDescriptions[cardDescriptionIndex].description.html() !== description || ui.cardDescriptions[cardDescriptionIndex].description.style("display") === "none") {
+    ui.cardDescriptions[cardDescriptionIndex].description.html(description);
+    ui.cardDescriptions[cardDescriptionIndex].image.attribute("src", imagePath);
+    if (frameColour.length > 0) {
+      ui.cardDescriptions[cardDescriptionIndex].image.style("border", `${ui.lineThicknessCardDescriptionBorder} solid ${frameColour}`);
+    } else {
+      ui.cardDescriptions[cardDescriptionIndex].image.style("border", "none");
+    }
+    if (useGrayscale) {
+      grayscale = 100;
+    } else {
+      grayscale = 0;
+    }
+    ui.cardDescriptions[cardDescriptionIndex].image.style("filter", `grayscale(${grayscale}%)`);
+    
+    // Show the new contents
+    ui.cardDescriptions[cardDescriptionIndex].description.show();
+    ui.cardDescriptions[cardDescriptionIndex].image.show();
+  }
 }
 
 // Module exports should only be set when running unit tests, as this causes a console error when running the sketch

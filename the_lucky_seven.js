@@ -75,463 +75,144 @@ let IMAGE_MAPPING = {};
 let FONT_MAPPING = {};
 let SOUND_MAPPING = {};
 
-// Stores a snapshot of the game state at the time of calling this function
-function snapshotGameState() {
-  snapshot = structuredClone(game);
-}
-
-function updateUI() {
-  const butttonIndexFlipUp = 0;
-  const butttonIndexFlipDown = 1;
-  const butttonIndexCancel = 2;
-  if (game.squadSelectedCoordinate) {
-    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
-    if (isPhaseManeuver()) {
-      // ABILITY: The Mouse can flip down after moving
-      if (!game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].hasBeenFlipped && (!game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].rotated || game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].canFlipDownAfterMoving() )) {
-
-        if (game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up) {
-          // Draw the flip down button if applicable
-          ui.squadButtons[butttonIndexFlipDown].show();
-        } else if (game.squadSelectedCoordinateCanFlipUp) {
-          // Draw the flip up button if applicable
-          // To minimise the amount of recomputation, the preconditions for a flip-up are determined when the squad member is selected
-          ui.squadButtons[butttonIndexFlipUp].show();
-        }
-      } else {
-        ui.squadButtons[butttonIndexFlipUp].hide();
-        ui.squadButtons[butttonIndexFlipDown].hide();
-      }
-      // Draw the cancel button
-      ui.squadButtons[butttonIndexCancel].show();
-    } else if (isPhaseAttack()) {
-      ui.squadButtons[butttonIndexFlipUp].hide();
-      ui.squadButtons[butttonIndexFlipDown].hide();
-      ui.squadButtons[butttonIndexCancel].show();
-    } else {
-      ui.squadButtons[butttonIndexFlipUp].hide();
-      ui.squadButtons[butttonIndexFlipDown].hide();
-      ui.squadButtons[butttonIndexCancel].hide();
-    }
-  }
-  
-  // Draw phase labels
-  let phaseFill = "";
-  for (let i = 0; i < ui.phaseLabels.length; i++) {
-    if (i === game.phase) {
-      switch(game.phase) {
-        case 0:
-          phaseFill = COLOUR_MAPPING.FONT_PHASE_ENCOUNTER;
-          break;
-        case 1:
-          phaseFill = COLOUR_MAPPING.FONT_PHASE_MANEUVER;
-          break;
-        case 2:
-          phaseFill = COLOUR_MAPPING.FONT_PHASE_ATTACK;
-          break;
-        case 3:
-        case 4:
-          // Wrap up phase is technically part of Counter-Attack
-          phaseFill = COLOUR_MAPPING.FONT_PHASE_COUNTER_ATTACK;
-          break;
-      }
-      ui.phaseLabels[i].style("border-bottom", `${ui.lineThicknessPhaseLabelUnderline} solid ${phaseFill}`);
-    } else {
-      phaseFill = COLOUR_MAPPING.BLACK;
-      ui.phaseLabels[i].style("border-bottom", "none");
-    }
-    ui.phaseLabels[i].style("color", phaseFill);
-  }
-  
-  // Draw card descriptions for both squad members and threats, since cells can contain a mix of these
-  let cardDescriptionText = [];
-  let cardDescriptionIndex = 0;
-  if (game.squadSelectedCoordinate) {
-    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
-    let squadMemberInfo = [
-      getHTMLTextDivWithClass(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].name, "ui-card-description-title"),
-      getHTMLTextDivWithClass(`<strong>Strength</strong>: <span class="${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getStrengthCSSClass()}">${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getStrength()}</span>`, "ui-card-description-strength"),
-      getHTMLTextDivWithClass(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].descriptionHTML, "ui-card-description-blurb"),
-    ].join("<br>");
-
-    updateCardDescription(squadMemberInfo, getCardImagePathForSquadMember(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, friendlyIndex), cardDescriptionIndex, game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getImageBorderColour(), !game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up);
-    cardDescriptionIndex++;
-  }
-  for (let t = 0; t < game.threatsSelected.length; t++) {
-    let threatInfoRaw = [getHTMLTextDivWithClass(game.threatsSelected[t].name, "ui-card-description-title"),
-                         getHTMLTextDivWithClass(game.threatsSelected[t].descriptionHTML, "ui-card-description-blurb")];
-    // Show the strength for attackable threats, but hide it for those which can't be attacked (includes Tanks)
-    if (game.threatsSelected[t].strength > 0 && game.threatsSelected[t].type !== 0) {
-      threatInfoRaw.splice(1, 0, getHTMLTextDivWithClass(`<strong>Strength</strong>: <span class="${game.threatsSelected[t].getStrengthCSSClass()}">${game.threatsSelected[t].getStrength()}</span>`, "ui-card-description-strength"));
-    }
-    let threatInfo = threatInfoRaw.join("<br>");
-
-    updateCardDescription(threatInfo, ui.imageMap.threats[game.threatsSelected[t].type].card, cardDescriptionIndex, "", false);
-    cardDescriptionIndex++;
-  }
-  for (let cd = cardDescriptionIndex; cd < ui.cardDescriptions.length; cd++) {
-    // Need to hide descriptions depending on the selected elements,
-    // otherwise old descriptions will persist
-    ui.cardDescriptions[cd].description.hide();
-    ui.cardDescriptions[cd].image.hide();
-  }
-}
-
-function updateCardDescription(description, imagePath, cardDescriptionIndex, frameColour, useGrayscale) {
-  // Only update the HTML if there is an actual change (includes toggling of the same description after pressing an empty square)
-  // The same logic could be independently applied to the card image too, but the image is usually tied to the description anyway
-  if (ui.cardDescriptions[cardDescriptionIndex].description.html() !== description || ui.cardDescriptions[cardDescriptionIndex].description.style("display") === "none") {
-    ui.cardDescriptions[cardDescriptionIndex].description.html(description);
-    ui.cardDescriptions[cardDescriptionIndex].image.attribute("src", imagePath);
-    if (frameColour.length > 0) {
-      ui.cardDescriptions[cardDescriptionIndex].image.style("border", `${ui.lineThicknessCardDescriptionBorder} solid ${frameColour}`);
-    } else {
-      ui.cardDescriptions[cardDescriptionIndex].image.style("border", "none");
-    }
-    if (useGrayscale) {
-      grayscale = 100;
-    } else {
-      grayscale = 0;
-    }
-    ui.cardDescriptions[cardDescriptionIndex].image.style("filter", `grayscale(${grayscale}%)`);
-    
-    // Show the new contents
-    ui.cardDescriptions[cardDescriptionIndex].description.show();
-    ui.cardDescriptions[cardDescriptionIndex].image.show();
-  }
-}
-
-function pressPhaseNext() {
-  if (!isGameInProgress()) {
-    return;
-  }
-  game.phase = (game.phase + 1) % MAX_PHASES;
-  switch(game.phase) {
-    case 0:
-      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
-      startPhaseEncounter();
-      snapshotGameState();
-      break;
-    case 1:
-      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
-      startPhaseManeuver();
-      snapshotGameState();
-      break;
-    case 2:
-      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
-      startPhaseAttack();
-      snapshotGameState();
-      break;
-    case 3:
-      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
-      startPhaseCounterAttack();
-      snapshotGameState();
-      break;
-    case 4:
-      startPhaseWrapUp();
-      game.turn++;
-      snapshotGameState();
-      setTurnLabelText();
-      break;
-  }
-  // Hide the action buttons to avoid potential context leaking from the previous phase
-  pressCancel();
-}
-
-function pressPhaseUndo() {
-  console.debug("Resetting the phase back to the initial state");
-  playSound(SOUND_MAPPING.BUTTON_UNDO);
-  game = structuredClone(snapshot);
-  // For simplicity, undo the phase with a clean selection state.
-  // It helps that the same state cleanse happens each time the phase progresses.
-  pressCancel();
-  // Since this is p5.js and not Node.js, we are limited by whatever tooling is provided by the base library and vanilla JavaScript.
-  // As such, making a deep copy with objects that have class functions is rather painful.
-  // Instead, we rely on structuredClone() to get the class properties restored and then manually duck type the relevant game state
-  // members by modifying the object prototypes.
-  for (let s = 0; s < game.squad.length; s++) {
-    Object.setPrototypeOf(game.squad[s], SquadMember.prototype);
-    // Connect back the grid reference again
-    let friendlyIndex = getFriendlyIndexAt(game.squad[s].x, game.squad[s].y, SquadMember.friendlyIndex);
-    game.grid[game.squad[s].x][game.squad[s].y][friendlyIndex] = game.squad[s];
-  }
-  for (let t = 0; t < game.threats.length; t++) {
-    Object.setPrototypeOf(game.threats[t], Threat.prototype);
-  }
-  for (let a = 0; a < game.threatsActive.length; a++) {
-    Object.setPrototypeOf(game.threatsActive[a], Threat.prototype);
-    // Connect back the grid reference again
-    // Note that multiple threats can occupy the same cell, so the using getFriendlyIndexAt() can get the wrong index in those instances
-    // But this also makes the assumption that multiple threats of the same type cannot overlap with each other
-    let threatIndex = containsThreatType(game.threatsActive[a].x, game.threatsActive[a].y, game.threatsActive[a].type);
-    game.grid[game.threatsActive[a].x][game.threatsActive[a].y][threatIndex] = game.threatsActive[a];
-  }
-  for (let i = 0; i < game.threatsInactive.length; i++) {
-    Object.setPrototypeOf(game.threatsInactive[i], Threat.prototype);
-  }
-}
-
-function pressGameReset() {
-  console.debug("Game reset!");
-  playSound(SOUND_MAPPING.BUTTON_NEW_GAME);
-  setupNewGame();
-}
-
-function pressFlipUp() {
-  console.debug("Flip up!");
-  let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
-  if (game.squadSelectedCoordinate && canFlipUp(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, friendlyIndex)) {
-    playSound(SOUND_MAPPING.BUTTON_FLIP_UP);
-    game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].registerFlip(true);
-    pressCancel();
-  }
-}
-
-function canFlipUp(x, y, z) {
-  if (game.grid[x][y][z].up) {
-    console.debug(`Not able to flip up because ${game.grid[x][y][z].name} is already up`);
-    return false;
-  }
-  if (game.grid[x][y][z].rotated) {
-    console.debug(`Not able to flip up because ${game.grid[x][y][z].name} is rotated`);
-    return false;
-  }
-  
-  if (game.grid[x][y][z].canFlipUpWithoutSquadMember()) {
-    console.debug("The Leader can flip up by themselves");
-    return true;
-  }
-  
-  let adjacentLeaders = filterAdjacentFriendliesAt(x, y, true, SquadMember.type["The Leader"], true);
-  if (adjacentLeaders.length > 0) {
-    console.debug("The Leader is nearby! Able to flip up from a diagonal position in addition to the normal flip up rules.");
-    return true;
-  }
-  
-  let adjacentSquares = getAdjacentMapCoordinates(x, y, false, false);
-  for (let i = 0; i < adjacentSquares.length; i++) {
-    console.debug(`Checking ${adjacentSquares[i].x},${adjacentSquares[i].y}`);
-    let adjacentFriendlyIndex = getFriendlyIndexAt(adjacentSquares[i].x, adjacentSquares[i].y, SquadMember.friendlyIndex);
-    if (adjacentFriendlyIndex >= 0 && game.grid[adjacentSquares[i].x][adjacentSquares[i].y][adjacentFriendlyIndex].up) {
-      return true;
-    }
-  }
-  console.debug("Not able to flip up because there is no adjacent squad member who is up");
-  return false;
-}
-
-function pressFlipDown() {
-  console.debug("Flip down!");
-  if (game.squadSelectedCoordinate) {
-    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
-    if (game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up) {
-      playSound(SOUND_MAPPING.BUTTON_FLIP_DOWN);
-      game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].registerFlip(false);
-    } else {
-      console.debug(`Cannot flip down because ${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].name} is already down`);
-      return;
-    }
-    pressCancel();
-  }
-}
-
-function pressCancel() {
-  game.squadSelectedCoordinate = null;
-  game.moveCoordinates = [];
-  game.attackCoordinates = [];
-  game.threatsSelected = [];
-  for (let i = 0; i < ui.squadButtons.length; i++) {
-    ui.squadButtons[i].hide();
-  }
-}
-
-function getAdjacentMapCoordinates(startX, startY, includeSelf, includeDiagonals) {
-  let coordinates = [
-    new MapCoordinate(startX, startY - 1),
-    new MapCoordinate(startX + 1, startY),
-    new MapCoordinate(startX, startY + 1),
-    new MapCoordinate(startX - 1, startY),
+function setupNewGame() {
+  // This is the full list of squad members
+  // This is defined here instead of the global scope to fix an issue where constantly pressing reset preserves the squad member's down status
+  const squadBench = [
+    new SquadMember("The Leader", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 1),
+    new SquadMember("The Athlete", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 2),
+    new SquadMember("The Mouse", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 4),
+    new SquadMember("The Natural", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 8),
+    new SquadMember("The Pacifist", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 16),
+    new SquadMember("The Hammer", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
+    new SquadMember("The Anvil", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
+    new SquadMember("The Joker", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 80), // 64 + 16, since they have 2 abilities
   ];
-  if (includeSelf) {
-    coordinates.push(new MapCoordinate(startX, startY));
-  }
-  if (includeDiagonals) {
-    coordinates.push(new MapCoordinate(startX + 1, startY - 1),
-                     new MapCoordinate(startX + 1, startY + 1),
-                     new MapCoordinate(startX - 1, startY + 1),
-                     new MapCoordinate(startX - 1, startY - 1));
-  }
-  for (let c = 0; c < coordinates.length; c++) {
-    // Remember that the first column and row is reserved
-    if (coordinates[c].x <= 0 || coordinates[c].x >= game.grid.length ||
-        coordinates[c].y <= 0 || coordinates[c].y >= game.grid[0].length) {
-          coordinates.splice(c, 1);
-          c--;
-        }
-  }
-  return coordinates;
-}
+  game = {
+    // This is the board represented as a 3D array because some cells can have multiple cards occupying it
+    grid: [],
+    // This is the phase indicator
+    phase: 0,
+    // This is the ordered list of playable squad members
+    squad: [],
+    // This is the coordinate of the currently selected squad member
+    squadSelectedCoordinate: null,
+    // Indicates whether the selected squad member can flip up
+    squadSelectedCoordinateCanFlipUp: false,
+    // The list of map cards on the X axis used mainly during the intial setup
+    mapcardsX: [],
+    // The list of map cards on the Y axis used mainly during the intial setup
+    mapcardsY: [],
+    // The list of all threats that will be played in the game
+    threats: [],
+    // The list of pending threats
+    threatsPending: [],
+    threatsPendingValidCoordinates: [],
+    // The list of active threats
+    threatsActive: [],
+    // The list of defeated threats
+    threatsInactive: [],
+    // The list of selected threats
+    threatsSelected: [],
+    // The list of valid coordinates that a squad member can move to
+    moveCoordinates: [],
+    // The list of valid coordinates that a squad member can attack
+    attackCoordinates: [],
+    // All possible coordinates that all active threats can attack and cannot be dodged
+    counterAttackCoordinates: [],
+    // All possible coordinates that all active threats can attack and can be dodged
+    counterAttackCoordinatesDodgeable: [],
+    // The number of turns before the game ends once all the threats have been deployed
+    finalTurnsRemaining: 2, // EXTRA: When all threats are played, player gets +1 extra final turns in addition to the standard amount for each lost squad member
+    isInFinalTurns: false,
+    // The current turn number
+    turn: 1,
+    // Indicates the game outcome. < 0 = Lose, 0 = In progress, > 0 = Win
+    outcome: 0,
+    // Indicates which page the player is looking at
+    menuIndex: MENU_MAPPING.GAME,
+    // The total score the player is able to achieve if they win the game
+    finalScore: 5,
+    // Not part of the original game, but the final score decreases if the final turns
+    // take longer than expected to finish
+    finalTurnsPar: 2,
+    // The decrement used to punish players who require more than finalTurnsPar to finish the game
+    finalTurnPenalty: -1,
+    //
+    settings: JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY_SETTINGS)),
+  };
 
-function getMovementCoordinates(startX, startY) {
-  let coordinates = getAdjacentMapCoordinates(startX, startY, false, true);
-  let coordinatesValid = [];
-  for (let c = 0; c < coordinates.length; c++) {
-    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, Threat.friendlyIndex)) {
-      // Space is occupied by a threat
-      console.debug("Space is occupied by a threat");
-      continue;
-    }
-    let friendlyIndex = getFriendlyIndexAt(coordinates[c].x, coordinates[c].y, SquadMember.friendlyIndex);
-    if (friendlyIndex >= 0 && (!game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].isMovable() || !game.grid[coordinates[c].x][coordinates[c].y][friendlyIndex].up)) {
-      // Space is occupied by a immovable squad member (remember that squad members who are down cannot move at all)
-      console.debug("Space is occupied by a immovable squad member");
-      continue;
-    }
-    // Exclude diagonal spaces that are cut off by threats
-    let relativeMapCoordinate = getRelativeMapCoordinate(startX, startY, coordinates[c].x, coordinates[c].y);
-    if ((relativeMapCoordinate.x === -1 && relativeMapCoordinate.y === -1) ||
-        (relativeMapCoordinate.x === 1 && relativeMapCoordinate.y === -1) ||
-        (relativeMapCoordinate.x === -1 && relativeMapCoordinate.y === 1) ||
-        (relativeMapCoordinate.x === 1 && relativeMapCoordinate.y === 1)) {
-          console.debug(`Testing diagonal square on ${coordinates[c].x},${coordinates[c].y}`);
-          console.debug(`using vector ${relativeMapCoordinate.x},${relativeMapCoordinate.y}`);
-          console.debug(`which means ${startX + relativeMapCoordinate.x},${startY}`);
-          console.debug(`and ${startX},${startY + relativeMapCoordinate.y}`);
-          // Since the start cell and relative coordinate are valid positions in the grid,
-          // it can be inferred that the adjacent coordinates shared by them are also valid
-          // (unless a non-qualdrilateral grid is allowed, then this would have to be revisited)
-          if (containsFriendlyIndex(startX + relativeMapCoordinate.x, startY, Threat.friendlyIndex) &&
-              containsFriendlyIndex(startX, startY + relativeMapCoordinate.y, Threat.friendlyIndex)) {
-                console.debug("Space is blocked off by adjacent threats");
-                continue;
-              }
-        }
-    
-    coordinatesValid.push(coordinates[c]);
-  }
-  return coordinatesValid;
-}
-
-function getAttackCoordinates(startX, startY, includeDiagonals) {
-  let coordinates = getAdjacentMapCoordinates(startX, startY, false, includeDiagonals);
-  let coordinatesValid = [];
-  for (let c = 0; c < coordinates.length; c++) {
-    if (containsFriendlyIndex(coordinates[c].x, coordinates[c].y, Threat.friendlyIndex)) {
-      console.debug(`${coordinates[c].x}, ${coordinates[c].y} can be attacked`);
-      coordinatesValid.push(coordinates[c]);
-    }
-  }
-  return coordinatesValid;
-}
-
-function activateMortar(mortarX, mortarY, includeDirectHit) {
-  console.debug(`Mortar is at ${mortarX},${mortarY}`);
-  let affectedCoordinates = getAdjacentMapCoordinates(mortarX, mortarY, true, false);
-  for (let i = 0; i < affectedCoordinates.length; i++) {
-    console.debug(`Mortar struck at ${affectedCoordinates[i].x},${affectedCoordinates[i].y}`);
-    for (let squadIndex = 0; squadIndex < game.squad.length; squadIndex++) {
-      if (game.squad[squadIndex].x === affectedCoordinates[i].x &&
-          game.squad[squadIndex].y === affectedCoordinates[i].y) {
-            // Note that the grid has a reference to the squad list, so it gets updated automatically
-            game.squad[squadIndex].up = false;
-            console.debug(`${game.squad[squadIndex].name} is down!`);
-            
-            if (includeDirectHit && game.squad[squadIndex].x === mortarX && game.squad[squadIndex].y === mortarY) {
-              console.debug(`${game.squad[squadIndex].name} took a direct hit from the mortar!`);
-              game.squad[squadIndex].rotated = true;
-              game.squad[squadIndex].canMove = false;
-            }
-            break;
-          }
-    }
-  }
-}
-
-function resolveThreatOverlap(threatToBePlaced, column, row) {
-  // Once you enter this function, assume that the threat cannot overlap and the original column is taken already
-  
-  let countSquadMembers = 0;
-  let countThreats = 0;
-  let countEmpty = 0;
-  let countMax = game.grid.length - 1;
-  let lastSquadMemberX = -1;
-  for (let i = 0; i < game.grid.length; i++) {
-    if (game.grid[i][row].length <= 0) {
-      // Found an empty cell, but see if there are other options
-      countEmpty++;
-      continue;
-    }
-    // Need to determine various metrics for overlap calculations later on
-    for (let cellIndex = 0; cellIndex < game.grid[i][row].length; cellIndex++) {
-      if (game.grid[i][row][cellIndex].isFriendly > 0) {
-        // Make a note of the last known squad member, since this could be a potential slot
-        countSquadMembers++;
-        lastSquadMemberX = game.grid[i][row][cellIndex].x;
-      } else if (game.grid[i][row][cellIndex].isFriendly < 0) {
-        countThreats++;
-      }
-    }
-  }
-  
-  if (countThreats >= countMax) {
-    // Discard threat since the entire row has all threats
-    return -1;
-  } else if (countSquadMembers > 0 && countEmpty <= 0) {
-    // Discard squad member
-    removeFriendliesAt(lastSquadMemberX, row);
-    return lastSquadMemberX;
-  }
-  
-  // From the rules:
-  // If you go to place an INFANTRY or MACHINE GUN threat and there is already another card in that location,
-  //       place the new threat in the closest empty location in the same row.
-  // If there are two equally distant empty locations, select the one closer to the center of the map grid.
-  //
-  // The idea is to do 2 horizontal scans from the original column (left & right) and pick the one that
-  // is within bounds AND is closer to the centre
-  let indexLeftRelative = 1;
-  let indexRightRelative = 1;
-  let indexColumnMid = 3;
-  let checkLeftSideFirst = column >= indexColumnMid;
-  for (let i = 0; i < game.grid.length; i++) {
-    // Keep the check indexes within bounds, although this does mean the edges can be checked multiple times for no good reason
-    let indexLeft = Math.max(MIN_MAP_CARD_VALUE, Math.min(column - indexLeftRelative, MAX_MAP_CARD_VALUE));
-    let indexRight = Math.max(MIN_MAP_CARD_VALUE, Math.min(column + indexRightRelative, MAX_MAP_CARD_VALUE));
-    console.debug(`Checking ${indexLeft} and then ${indexRight}`);
-    if (checkLeftSideFirst) {
-      if (indexLeft >= 0 && game.grid[indexLeft][row].length <= 0) {
-        // Found a spare slot somewhere on the left
-        return indexLeft;
-      } else if (indexRight < game.grid.length && game.grid[indexRight][row].length <= 0) {
-        // Found a spare slot somewhere on the right
-        return indexRight;
-      }
-    } else {
-      if (indexRight < game.grid.length && game.grid[indexRight][row].length <= 0) {
-        // Found a spare slot somewhere on the right
-        return indexRight;
-      } else if (indexLeft >= 0 && game.grid[indexLeft][row].length <= 0) {
-        // Found a spare slot somewhere on the left
-        return indexLeft;
-      }
-    }
-    indexLeftRelative++;
-    indexRightRelative++;
-  }
-  
-  if (lastSquadMemberX >= 0 && lastSquadMemberX < game.grid.length) {
-    console.debug(`Found a squad member at ${lastSquadMemberX},${row} who can be discarded`);
-    removeFriendliesAt(lastSquadMemberX, row);
-    return lastSquadMemberX;
-  }
-  
-  console.debug(`No more space on the row at all - discarding the threat`);
-  return -1;
-}
-
-function setup() {
   setupUI();
-  game.menuIndex = MENU_MAPPING.OVERVIEW;
+
+  // Call this function to avoid having the turn label defined in two spearate locations
+  setTurnLabelText();
+
+  // Set up the grid with the correct dimensions
+  for (let i = 0; i < MAX_MAP_CARD_VALUE - 1; i++) {
+    game.grid[i] = [[], [], [], [], []];
+  }
+  
+  // Randomise starting squad members
+  game.squad = shuffleListNonDestructively(squadBench, game.settings.SQUAD_MEMBERS_SUBTRACTION);
+  
+  // Randomise regular threats (since we don't know the absolute card spread, this generates
+  // some extra cards that gets omitted when shuffling)
+  const threatTypes = Object.keys(game.settings.THREAT_COUNT_MAPPING);
+  for (let threatType = Number(threatTypes[0]); threatType < threatTypes.length; threatType++) {
+    // First column is reserved for tanks, so this corresponds to the column index
+    for (let threatCount = CELL_RESERVATION.x; threatCount <= game.settings.THREAT_COUNT_MAPPING[threatType]; threatCount++) {
+      let threatCountAdjusted = threatCount % (MAX_MAP_CARD_VALUE - 1);
+      if (threatType === Threat.type["Tank"]) {
+        // Remember that Tanks are special because they always spawn in the first column
+        threatCountAdjusted = 0;
+      } else if (threatCountAdjusted <= 0) {
+        // First column is reserved for tanks, so this corresponds to the first column index when looping back
+        threatCountAdjusted = CELL_RESERVATION.x;
+      }
+      // Y coordinate is set to negative because it's calculated properly during the Encounter phase
+      game.threats.push(new Threat(threatType, threatCountAdjusted, -1));
+    }
+  }
+  game.threats = shuffleListNonDestructively(game.threats, game.threats.length - game.settings.THREAT_COUNT_TOTAL);
+  console.debug(`Total threats: ${game.threats.length}`);
+  
+  // Randomise horizontal map cards
+  game.mapcardsX = shuffleListNonDestructively(MAPCARDS_BENCH_X);
+  console.debug("Finished horizontal map cards");
+  console.debug(JSON.stringify(game.mapcardsX));
+  
+  // Randomise vertical map cards
+  game.mapcardsY = shuffleListNonDestructively(MAPCARDS_BENCH_Y);
+  console.debug("Finished vertical map cards");
+  console.debug(JSON.stringify(game.mapcardsY));
+  
+  // Randomise squad member positions
+  let c = MIN_MAP_CARD_VALUE;
+  // Not to be confused with CELL_RESERVATION
+  let mapCardOffset = new MapCoordinate(1, 1);
+  for (let s = 0; s < game.squad.length; s++) {
+    // Apply offset to ensure first row and column remain unoccupied (reserved for map cards & Tanks)
+    game.squad[s].x = findMapCardWithValue(game.mapcardsX, c) + mapCardOffset.x;
+    game.squad[s].y = findMapCardWithValue(game.mapcardsY, c) + mapCardOffset.y;
+    console.debug(`${game.squad[s].name} is at ${game.squad[s].x},${game.squad[s].y}`);
+    game.grid[game.squad[s].x][game.squad[s].y].push(game.squad[s]);
+    c++;
+  }
+  // This handles the last setup step where a mortar-like effect takes
+  // action where the last squad member would have been placed
+  let isCardIndexExceeded = c > MAX_MAP_CARD_VALUE;
+  if (isCardIndexExceeded) {
+    // If the last squad member is being played, the mortar will strike them
+    c = MAX_MAP_CARD_VALUE;
+  }
+  // Apply offset to ensure first row and column remain unoccupied (reserved for map cards & Tanks)
+  activateMortar(findMapCardWithValue(game.mapcardsX, c) + mapCardOffset.x,
+                 findMapCardWithValue(game.mapcardsY, c) + mapCardOffset.y,
+                 isCardIndexExceeded);
+  
+  startPhaseEncounter();
+  snapshotGameState();
+  console.debug(JSON.stringify(game.grid));
 }
 
 function setupUI() {
@@ -695,144 +376,336 @@ function setupUI() {
   createCanvas(960, 580);
 }
 
-function setupNewGame() {
-  // This is the full list of squad members
-  // This is defined here instead of the global scope to fix an issue where constantly pressing reset preserves the squad member's down status
-  const squadBench = [
-    new SquadMember("The Leader", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 1),
-    new SquadMember("The Athlete", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 2),
-    new SquadMember("The Mouse", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 4),
-    new SquadMember("The Natural", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 8),
-    new SquadMember("The Pacifist", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 16),
-    new SquadMember("The Hammer", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
-    new SquadMember("The Anvil", 1, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 32),
-    new SquadMember("The Joker", 0, COLOUR_MAPPING.HIGHLIGHT_SQUAD, 80), // 64 + 16, since they have 2 abilities
-  ];
-  game = {
-    // This is the board represented as a 3D array because some cells can have multiple cards occupying it
-    grid: [],
-    // This is the phase indicator
-    phase: 0,
-    // This is the ordered list of playable squad members
-    squad: [],
-    // This is the coordinate of the currently selected squad member
-    squadSelectedCoordinate: null,
-    // Indicates whether the selected squad member can flip up
-    squadSelectedCoordinateCanFlipUp: false,
-    // The list of map cards on the X axis used mainly during the intial setup
-    mapcardsX: [],
-    // The list of map cards on the Y axis used mainly during the intial setup
-    mapcardsY: [],
-    // The list of all threats that will be played in the game
-    threats: [],
-    // The list of pending threats
-    threatsPending: [],
-    threatsPendingValidCoordinates: [],
-    // The list of active threats
-    threatsActive: [],
-    // The list of defeated threats
-    threatsInactive: [],
-    // The list of selected threats
-    threatsSelected: [],
-    // The list of valid coordinates that a squad member can move to
-    moveCoordinates: [],
-    // The list of valid coordinates that a squad member can attack
-    attackCoordinates: [],
-    // All possible coordinates that all active threats can attack and cannot be dodged
-    counterAttackCoordinates: [],
-    // All possible coordinates that all active threats can attack and can be dodged
-    counterAttackCoordinatesDodgeable: [],
-    // The number of turns before the game ends once all the threats have been deployed
-    finalTurnsRemaining: 2, // EXTRA: When all threats are played, player gets +1 extra final turns in addition to the standard amount for each lost squad member
-    isInFinalTurns: false,
-    // The current turn number
-    turn: 1,
-    // Indicates the game outcome. < 0 = Lose, 0 = In progress, > 0 = Win
-    outcome: 0,
-    // Indicates which page the player is looking at
-    menuIndex: MENU_MAPPING.GAME,
-    // The total score the player is able to achieve if they win the game
-    finalScore: 5,
-    // Not part of the original game, but the final score decreases if the final turns
-    // take longer than expected to finish
-    finalTurnsPar: 2,
-    // The decrement used to punish players who require more than finalTurnsPar to finish the game
-    finalTurnPenalty: -1,
-    //
-    settings: JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY_SETTINGS)),
-  };
+// Stores a snapshot of the game state at the time of calling this function
+function snapshotGameState() {
+  snapshot = structuredClone(game);
+}
 
-  setupUI();
+// Returns a MapCoordinate object with X, Y offsets applied relative to GRID_START
+function getGridCoordinate(x, y) {
+  return new MapCoordinate(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT));
+}
 
-  // Call this function to avoid having the turn label defined in two spearate locations
-  setTurnLabelText();
+// Draws a square with respect to the GRID_START global variable, given a set of X and Y indexes.
+// Returns a MapCoordinate object of where the square was drawn.
+function drawSquareFromGridStart(x, y, squareWidth) {
+  // This assumes GRID_SQUARE_WIDTH == GRID_SQUARE_HEIGHT
+  const squareCoordinate = getGridCoordinate(x, y);
+  square(squareCoordinate.x, squareCoordinate.y, squareWidth);
+  return squareCoordinate;
+}
 
-  // Set up the grid with the correct dimensions
-  for (let i = 0; i < MAX_MAP_CARD_VALUE - 1; i++) {
-    game.grid[i] = [[], [], [], [], []];
-  }
-  
-  // Randomise starting squad members
-  game.squad = shuffleListNonDestructively(squadBench, game.settings.SQUAD_MEMBERS_SUBTRACTION);
-  
-  // Randomise regular threats (since we don't know the absolute card spread, this generates
-  // some extra cards that gets omitted when shuffling)
-  const threatTypes = Object.keys(game.settings.THREAT_COUNT_MAPPING);
-  for (let threatType = Number(threatTypes[0]); threatType < threatTypes.length; threatType++) {
-    // First column is reserved for tanks, so this corresponds to the column index
-    for (let threatCount = CELL_RESERVATION.x; threatCount <= game.settings.THREAT_COUNT_MAPPING[threatType]; threatCount++) {
-      let threatCountAdjusted = threatCount % (MAX_MAP_CARD_VALUE - 1);
-      if (threatType === Threat.type["Tank"]) {
-        // Remember that Tanks are special because they always spawn in the first column
-        threatCountAdjusted = 0;
-      } else if (threatCountAdjusted <= 0) {
-        // First column is reserved for tanks, so this corresponds to the first column index when looping back
-        threatCountAdjusted = CELL_RESERVATION.x;
+function updateUI() {
+  const butttonIndexFlipUp = 0;
+  const butttonIndexFlipDown = 1;
+  const butttonIndexCancel = 2;
+  if (game.squadSelectedCoordinate) {
+    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
+    if (isPhaseManeuver()) {
+      // ABILITY: The Mouse can flip down after moving
+      if (!game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].hasBeenFlipped && (!game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].rotated || game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].canFlipDownAfterMoving() )) {
+
+        if (game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up) {
+          // Draw the flip down button if applicable
+          ui.squadButtons[butttonIndexFlipDown].show();
+        } else if (game.squadSelectedCoordinateCanFlipUp) {
+          // Draw the flip up button if applicable
+          // To minimise the amount of recomputation, the preconditions for a flip-up are determined when the squad member is selected
+          ui.squadButtons[butttonIndexFlipUp].show();
+        }
+      } else {
+        ui.squadButtons[butttonIndexFlipUp].hide();
+        ui.squadButtons[butttonIndexFlipDown].hide();
       }
-      // Y coordinate is set to negative because it's calculated properly during the Encounter phase
-      game.threats.push(new Threat(threatType, threatCountAdjusted, -1));
+      // Draw the cancel button
+      ui.squadButtons[butttonIndexCancel].show();
+    } else if (isPhaseAttack()) {
+      ui.squadButtons[butttonIndexFlipUp].hide();
+      ui.squadButtons[butttonIndexFlipDown].hide();
+      ui.squadButtons[butttonIndexCancel].show();
+    } else {
+      ui.squadButtons[butttonIndexFlipUp].hide();
+      ui.squadButtons[butttonIndexFlipDown].hide();
+      ui.squadButtons[butttonIndexCancel].hide();
     }
   }
-  game.threats = shuffleListNonDestructively(game.threats, game.threats.length - game.settings.THREAT_COUNT_TOTAL);
-  console.debug(`Total threats: ${game.threats.length}`);
   
-  // Randomise horizontal map cards
-  game.mapcardsX = shuffleListNonDestructively(MAPCARDS_BENCH_X);
-  console.debug("Finished horizontal map cards");
-  console.debug(JSON.stringify(game.mapcardsX));
+  // Draw phase labels
+  let phaseFill = "";
+  for (let i = 0; i < ui.phaseLabels.length; i++) {
+    if (i === game.phase) {
+      switch(game.phase) {
+        case 0:
+          phaseFill = COLOUR_MAPPING.FONT_PHASE_ENCOUNTER;
+          break;
+        case 1:
+          phaseFill = COLOUR_MAPPING.FONT_PHASE_MANEUVER;
+          break;
+        case 2:
+          phaseFill = COLOUR_MAPPING.FONT_PHASE_ATTACK;
+          break;
+        case 3:
+        case 4:
+          // Wrap up phase is technically part of Counter-Attack
+          phaseFill = COLOUR_MAPPING.FONT_PHASE_COUNTER_ATTACK;
+          break;
+      }
+      ui.phaseLabels[i].style("border-bottom", `${ui.lineThicknessPhaseLabelUnderline} solid ${phaseFill}`);
+    } else {
+      phaseFill = COLOUR_MAPPING.BLACK;
+      ui.phaseLabels[i].style("border-bottom", "none");
+    }
+    ui.phaseLabels[i].style("color", phaseFill);
+  }
   
-  // Randomise vertical map cards
-  game.mapcardsY = shuffleListNonDestructively(MAPCARDS_BENCH_Y);
-  console.debug("Finished vertical map cards");
-  console.debug(JSON.stringify(game.mapcardsY));
-  
-  // Randomise squad member positions
-  let c = MIN_MAP_CARD_VALUE;
-  // Not to be confused with CELL_RESERVATION
-  let mapCardOffset = new MapCoordinate(1, 1);
+  // Draw card descriptions for both squad members and threats, since cells can contain a mix of these
+  let cardDescriptionText = [];
+  let cardDescriptionIndex = 0;
+  if (game.squadSelectedCoordinate) {
+    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
+    let squadMemberInfo = [
+      getHTMLTextDivWithClass(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].name, "ui-card-description-title"),
+      getHTMLTextDivWithClass(`<strong>Strength</strong>: <span class="${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getStrengthCSSClass()}">${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getStrength()}</span>`, "ui-card-description-strength"),
+      getHTMLTextDivWithClass(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].descriptionHTML, "ui-card-description-blurb"),
+    ].join("<br>");
+
+    updateCardDescription(squadMemberInfo, getCardImagePathForSquadMember(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, friendlyIndex), cardDescriptionIndex, game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].getImageBorderColour(), !game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up);
+    cardDescriptionIndex++;
+  }
+  for (let t = 0; t < game.threatsSelected.length; t++) {
+    let threatInfoRaw = [getHTMLTextDivWithClass(game.threatsSelected[t].name, "ui-card-description-title"),
+                         getHTMLTextDivWithClass(game.threatsSelected[t].descriptionHTML, "ui-card-description-blurb")];
+    // Show the strength for attackable threats, but hide it for those which can't be attacked (includes Tanks)
+    if (game.threatsSelected[t].strength > 0 && game.threatsSelected[t].type !== 0) {
+      threatInfoRaw.splice(1, 0, getHTMLTextDivWithClass(`<strong>Strength</strong>: <span class="${game.threatsSelected[t].getStrengthCSSClass()}">${game.threatsSelected[t].getStrength()}</span>`, "ui-card-description-strength"));
+    }
+    let threatInfo = threatInfoRaw.join("<br>");
+
+    updateCardDescription(threatInfo, ui.imageMap.threats[game.threatsSelected[t].type].card, cardDescriptionIndex, "", false);
+    cardDescriptionIndex++;
+  }
+  for (let cd = cardDescriptionIndex; cd < ui.cardDescriptions.length; cd++) {
+    // Need to hide descriptions depending on the selected elements,
+    // otherwise old descriptions will persist
+    ui.cardDescriptions[cd].description.hide();
+    ui.cardDescriptions[cd].image.hide();
+  }
+}
+
+function pressPhaseNext() {
+  if (!isGameInProgress()) {
+    return;
+  }
+  game.phase = (game.phase + 1) % MAX_PHASES;
+  switch(game.phase) {
+    case 0:
+      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
+      startPhaseEncounter();
+      snapshotGameState();
+      break;
+    case 1:
+      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
+      startPhaseManeuver();
+      snapshotGameState();
+      break;
+    case 2:
+      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
+      startPhaseAttack();
+      snapshotGameState();
+      break;
+    case 3:
+      playSound(SOUND_MAPPING.BUTTON_PHASE_NEXT);
+      startPhaseCounterAttack();
+      snapshotGameState();
+      break;
+    case 4:
+      startPhaseWrapUp();
+      game.turn++;
+      snapshotGameState();
+      setTurnLabelText();
+      break;
+  }
+  // Hide the action buttons to avoid potential context leaking from the previous phase
+  pressCancel();
+}
+
+function pressPhaseUndo() {
+  console.debug("Resetting the phase back to the initial state");
+  playSound(SOUND_MAPPING.BUTTON_UNDO);
+  game = structuredClone(snapshot);
+  // For simplicity, undo the phase with a clean selection state.
+  // It helps that the same state cleanse happens each time the phase progresses.
+  pressCancel();
+  // Since this is p5.js and not Node.js, we are limited by whatever tooling is provided by the base library and vanilla JavaScript.
+  // As such, making a deep copy with objects that have class functions is rather painful.
+  // Instead, we rely on structuredClone() to get the class properties restored and then manually duck type the relevant game state
+  // members by modifying the object prototypes.
   for (let s = 0; s < game.squad.length; s++) {
-    // Apply offset to ensure first row and column remain unoccupied (reserved for map cards & Tanks)
-    game.squad[s].x = findMapCardWithValue(game.mapcardsX, c) + mapCardOffset.x;
-    game.squad[s].y = findMapCardWithValue(game.mapcardsY, c) + mapCardOffset.y;
-    console.debug(`${game.squad[s].name} is at ${game.squad[s].x},${game.squad[s].y}`);
-    game.grid[game.squad[s].x][game.squad[s].y].push(game.squad[s]);
-    c++;
+    Object.setPrototypeOf(game.squad[s], SquadMember.prototype);
+    // Connect back the grid reference again
+    let friendlyIndex = getFriendlyIndexAt(game.squad[s].x, game.squad[s].y, SquadMember.friendlyIndex);
+    game.grid[game.squad[s].x][game.squad[s].y][friendlyIndex] = game.squad[s];
   }
-  // This handles the last setup step where a mortar-like effect takes
-  // action where the last squad member would have been placed
-  let isCardIndexExceeded = c > MAX_MAP_CARD_VALUE;
-  if (isCardIndexExceeded) {
-    // If the last squad member is being played, the mortar will strike them
-    c = MAX_MAP_CARD_VALUE;
+  for (let t = 0; t < game.threats.length; t++) {
+    Object.setPrototypeOf(game.threats[t], Threat.prototype);
   }
-  // Apply offset to ensure first row and column remain unoccupied (reserved for map cards & Tanks)
-  activateMortar(findMapCardWithValue(game.mapcardsX, c) + mapCardOffset.x,
-                 findMapCardWithValue(game.mapcardsY, c) + mapCardOffset.y,
-                 isCardIndexExceeded);
+  for (let a = 0; a < game.threatsActive.length; a++) {
+    Object.setPrototypeOf(game.threatsActive[a], Threat.prototype);
+    // Connect back the grid reference again
+    // Note that multiple threats can occupy the same cell, so the using getFriendlyIndexAt() can get the wrong index in those instances
+    // But this also makes the assumption that multiple threats of the same type cannot overlap with each other
+    let threatIndex = containsThreatType(game.threatsActive[a].x, game.threatsActive[a].y, game.threatsActive[a].type);
+    game.grid[game.threatsActive[a].x][game.threatsActive[a].y][threatIndex] = game.threatsActive[a];
+  }
+  for (let i = 0; i < game.threatsInactive.length; i++) {
+    Object.setPrototypeOf(game.threatsInactive[i], Threat.prototype);
+  }
+}
+
+function pressGameReset() {
+  console.debug("Game reset!");
+  playSound(SOUND_MAPPING.BUTTON_NEW_GAME);
+  setupNewGame();
+}
+
+function pressFlipUp() {
+  console.debug("Flip up!");
+  let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
+  if (game.squadSelectedCoordinate && canFlipUp(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, friendlyIndex)) {
+    playSound(SOUND_MAPPING.BUTTON_FLIP_UP);
+    game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].registerFlip(true);
+    pressCancel();
+  }
+}
+
+function pressFlipDown() {
+  console.debug("Flip down!");
+  if (game.squadSelectedCoordinate) {
+    let friendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
+    if (game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].up) {
+      playSound(SOUND_MAPPING.BUTTON_FLIP_DOWN);
+      game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].registerFlip(false);
+    } else {
+      console.debug(`Cannot flip down because ${game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][friendlyIndex].name} is already down`);
+      return;
+    }
+    pressCancel();
+  }
+}
+
+function pressCancel() {
+  game.squadSelectedCoordinate = null;
+  game.moveCoordinates = [];
+  game.attackCoordinates = [];
+  game.threatsSelected = [];
+  for (let i = 0; i < ui.squadButtons.length; i++) {
+    ui.squadButtons[i].hide();
+  }
+}
+
+function activateMortar(mortarX, mortarY, includeDirectHit) {
+  console.debug(`Mortar is at ${mortarX},${mortarY}`);
+  let affectedCoordinates = getAdjacentMapCoordinates(mortarX, mortarY, true, false);
+  for (let i = 0; i < affectedCoordinates.length; i++) {
+    console.debug(`Mortar struck at ${affectedCoordinates[i].x},${affectedCoordinates[i].y}`);
+    for (let squadIndex = 0; squadIndex < game.squad.length; squadIndex++) {
+      if (game.squad[squadIndex].x === affectedCoordinates[i].x &&
+          game.squad[squadIndex].y === affectedCoordinates[i].y) {
+            // Note that the grid has a reference to the squad list, so it gets updated automatically
+            game.squad[squadIndex].up = false;
+            console.debug(`${game.squad[squadIndex].name} is down!`);
+            
+            if (includeDirectHit && game.squad[squadIndex].x === mortarX && game.squad[squadIndex].y === mortarY) {
+              console.debug(`${game.squad[squadIndex].name} took a direct hit from the mortar!`);
+              game.squad[squadIndex].rotated = true;
+              game.squad[squadIndex].canMove = false;
+            }
+            break;
+          }
+    }
+  }
+}
+
+function resolveThreatOverlap(threatToBePlaced, column, row) {
+  // Once you enter this function, assume that the threat cannot overlap and the original column is taken already
   
-  startPhaseEncounter();
-  snapshotGameState();
-  console.debug(JSON.stringify(game.grid));
+  let countSquadMembers = 0;
+  let countThreats = 0;
+  let countEmpty = 0;
+  let countMax = game.grid.length - 1;
+  let lastSquadMemberX = -1;
+  for (let i = 0; i < game.grid.length; i++) {
+    if (game.grid[i][row].length <= 0) {
+      // Found an empty cell, but see if there are other options
+      countEmpty++;
+      continue;
+    }
+    // Need to determine various metrics for overlap calculations later on
+    for (let cellIndex = 0; cellIndex < game.grid[i][row].length; cellIndex++) {
+      if (game.grid[i][row][cellIndex].isFriendly > 0) {
+        // Make a note of the last known squad member, since this could be a potential slot
+        countSquadMembers++;
+        lastSquadMemberX = game.grid[i][row][cellIndex].x;
+      } else if (game.grid[i][row][cellIndex].isFriendly < 0) {
+        countThreats++;
+      }
+    }
+  }
+  
+  if (countThreats >= countMax) {
+    // Discard threat since the entire row has all threats
+    return -1;
+  } else if (countSquadMembers > 0 && countEmpty <= 0) {
+    // Discard squad member
+    removeFriendliesAt(lastSquadMemberX, row);
+    return lastSquadMemberX;
+  }
+  
+  // From the rules:
+  // If you go to place an INFANTRY or MACHINE GUN threat and there is already another card in that location,
+  //       place the new threat in the closest empty location in the same row.
+  // If there are two equally distant empty locations, select the one closer to the center of the map grid.
+  //
+  // The idea is to do 2 horizontal scans from the original column (left & right) and pick the one that
+  // is within bounds AND is closer to the centre
+  let indexLeftRelative = 1;
+  let indexRightRelative = 1;
+  let indexColumnMid = 3;
+  let checkLeftSideFirst = column >= indexColumnMid;
+  for (let i = 0; i < game.grid.length; i++) {
+    // Keep the check indexes within bounds, although this does mean the edges can be checked multiple times for no good reason
+    let indexLeft = Math.max(MIN_MAP_CARD_VALUE, Math.min(column - indexLeftRelative, MAX_MAP_CARD_VALUE));
+    let indexRight = Math.max(MIN_MAP_CARD_VALUE, Math.min(column + indexRightRelative, MAX_MAP_CARD_VALUE));
+    console.debug(`Checking ${indexLeft} and then ${indexRight}`);
+    if (checkLeftSideFirst) {
+      if (indexLeft >= 0 && game.grid[indexLeft][row].length <= 0) {
+        // Found a spare slot somewhere on the left
+        return indexLeft;
+      } else if (indexRight < game.grid.length && game.grid[indexRight][row].length <= 0) {
+        // Found a spare slot somewhere on the right
+        return indexRight;
+      }
+    } else {
+      if (indexRight < game.grid.length && game.grid[indexRight][row].length <= 0) {
+        // Found a spare slot somewhere on the right
+        return indexRight;
+      } else if (indexLeft >= 0 && game.grid[indexLeft][row].length <= 0) {
+        // Found a spare slot somewhere on the left
+        return indexLeft;
+      }
+    }
+    indexLeftRelative++;
+    indexRightRelative++;
+  }
+  
+  if (lastSquadMemberX >= 0 && lastSquadMemberX < game.grid.length) {
+    console.debug(`Found a squad member at ${lastSquadMemberX},${row} who can be discarded`);
+    removeFriendliesAt(lastSquadMemberX, row);
+    return lastSquadMemberX;
+  }
+  
+  console.debug(`No more space on the row at all - discarding the threat`);
+  return -1;
 }
 
 function startPhaseEncounter() {
@@ -1104,158 +977,6 @@ function determineGameOutcome() {
   }
 }
 
-function mouseClicked(event) {
-  if (game.menuIndex !== MENU_MAPPING.GAME || isSettingsPromptActive()) {
-    return;
-  }
-  console.debug(event);
-  // This needs to account for scrollbars when zoomed in or on smaller displays
-  let clickX = Math.floor((event.x + window.scrollX - (GRID_START.x * 0.5)) / GRID_SQUARE_WIDTH);
-  let clickY = Math.floor((event.y + window.scrollY - (GRID_START.y * 0.75)) / GRID_SQUARE_HEIGHT);
-  console.debug(clickX);
-  console.debug(clickY);
-  
-  if (isPhaseEncounter()) {
-    if (game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS) {
-      // FEATURE: Threats can be assigned to a selectable column
-      for (let t = 0; t < game.threatsPending.length; t++) {
-        if (game.threatsPending[t].y === clickY) {
-          console.debug(`Moving threat to ${game.threatsPending[t].x}, ${game.threatsPending[t].y}`);
-          let unfriendlyIndex = containsThreatType(game.threatsPending[t].x, game.threatsPending[t].y, game.threatsPending[t].type);
-          // First column is reserved for tanks
-          if (clickX >= CELL_RESERVATION.x && canThreatMoveToNewColumn(game.threatsPending[t], clickX, clickY)) {
-            game.grid[game.threatsPending[t].x][game.threatsPending[t].y].splice(unfriendlyIndex, 1);
-            game.threatsPending[t].x = clickX;
-            game.grid[game.threatsPending[t].x][game.threatsPending[t].y].push(game.threatsPending[t]);
-            break;
-          }
-        }
-      }
-    }
-  } else if (isPhaseManeuver()) {
-    // If this is checked later, swapping squad member positions isn't as easy
-    for (let m = 0; m < game.moveCoordinates.length; m++) {
-      if (clickX === game.moveCoordinates[m].x && clickY === game.moveCoordinates[m].y) {
-        let oldFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
-        let neighbourFriendlyIndex = getFriendlyIndexAt(clickX, clickY, SquadMember.friendlyIndex);
-        if (neighbourFriendlyIndex >= 0) {
-          // Switching squad members (this would only be possible when both are movable)
-          console.debug(`Switched squad members at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} <--> ${clickX},${clickY}`);
-          game.grid[clickX][clickY].push(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex]);
-          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].push(game.grid[clickX][clickY][neighbourFriendlyIndex]);
-          // Register movements
-          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].registerMove();
-          game.grid[clickX][clickY][neighbourFriendlyIndex].registerMove();
-          // Update squad list as well
-          game.squad[getSquadMemberIndexWithName(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].name)].setCoordinates(clickX, clickY);
-          game.squad[getSquadMemberIndexWithName(game.grid[clickX][clickY][neighbourFriendlyIndex].name)].setCoordinates(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y)
-          // Remove the squad members from their old positions
-          game.grid[clickX][clickY].splice(neighbourFriendlyIndex, 1);
-          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].splice(oldFriendlyIndex, 1);
-        } else {
-          // Moving a squad member
-          console.debug(`Moving squad member at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} --> ${clickX},${clickY}`);
-          game.grid[clickX][clickY].push(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex]);
-          // Register movements
-          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].registerMove();
-          // Update squad list as well
-          let name = game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].name;
-          game.squad[getSquadMemberIndexWithName(name)].setCoordinates(clickX, clickY);
-          // Remove the squad member from their old position
-          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].splice(oldFriendlyIndex, 1);
-        }
-        
-        playSound(SOUND_MAPPING.SQUAD_MOVEMENT);
-        pressCancel();
-        // Force the movement squares to disappear once a movement is made
-        return false;
-      }
-    }
-  } else if (isPhaseAttack()) {
-    for (let a = 0; a < game.attackCoordinates.length; a++) {
-      if (clickX === game.attackCoordinates[a].x && clickY === game.attackCoordinates[a].y) {
-        let attackerFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
-        
-        game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][attackerFriendlyIndex].attackCoordinate = new MapCoordinate(clickX, clickY);
-        
-        let threatIndex = getFriendlyIndexAt(clickX, clickY, Threat.friendlyIndex);
-        game.grid[clickX][clickY][threatIndex].strengthOpposition += game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][attackerFriendlyIndex].strength;
-        
-        pressCancel();
-        // Force the attack squares to disappear once an attack is made
-        return false;
-      }
-    }
-  }
-  
-  // User pressed some other area on the grid
-  if (clickX >= 0 && clickX < game.grid.length &&
-      clickY >= 0 && clickY < game.grid[0].length) {
-        console.debug(game.grid[clickX][clickY]);
-        // Determine if a squad member was pressed on
-        let friendlyIndex = getFriendlyIndexAt(clickX, clickY, SquadMember.friendlyIndex);
-        let threatIndex = getFriendlyIndexAt(clickX, clickY, Threat.friendlyIndex);
-        if (friendlyIndex >= 0) {
-          if (isPhaseManeuver()) {
-            // Prevent shown buttons from persisting from the previous selection
-            pressCancel();
-            // Generate the possible movement squares
-            // 
-            // ABILITY: The Athlete can move once after already moving
-            if (game.grid[clickX][clickY][friendlyIndex].up && (game.grid[clickX][clickY][friendlyIndex].isMovable() || game.grid[clickX][clickY][friendlyIndex].canMoveAfterMoving())) {
-              game.moveCoordinates = getMovementCoordinates(clickX, clickY);
-            } else {
-              // The squad member cannot move, but might be able to do other actions when selected
-              game.moveCoordinates = [];
-            }
-          } else if (isPhaseAttack()) {
-            // ABILITY: The Mouse can attack when down
-            if ((game.grid[clickX][clickY][friendlyIndex].up || game.grid[clickX][clickY][friendlyIndex].canAttackWhenDown()) && game.grid[clickX][clickY][friendlyIndex].canAttack && !game.grid[clickX][clickY][friendlyIndex].isAttacking()) {
-              // ABILITY: The Natural is allowed to attack diagonals
-              game.attackCoordinates = getAttackCoordinates(clickX, clickY, game.grid[clickX][clickY][friendlyIndex].canAttackDiagonally());
-            } else {
-              // We only care about clearing the valid attack poitions here
-              game.attackCoordinates = [];
-            }
-          }
-          game.squadSelectedCoordinate = new MapCoordinate(clickX, clickY);
-          playSoundSquadSelect(game.grid[clickX][clickY][friendlyIndex]);
-          // Flipping up is only allowed in the Maneuver phase, so no point in doing redundant computations for other phases
-          if (isPhaseManeuver()) {
-            game.squadSelectedCoordinateCanFlipUp = canFlipUp(clickX, clickY, friendlyIndex);
-          }
-        } else {
-          // User pressed on some area without a squad member in it
-          pressCancel();
-        }
-        
-        // Get info about threats at the given location
-        if (threatIndex >= 0) {
-          game.threatsSelected = getAllThreatsAt(clickX, clickY);
-          for (let i = 0; i < game.threatsSelected.length; i++) {
-            playSoundThreatSelect(game.threatsSelected[i].type);
-          }
-        } else {
-          game.threatsSelected = [];
-        }
-      }
-  return false;
-}
-
-// Returns a MapCoordinate object with X, Y offsets applied relative to GRID_START
-function getGridCoordinate(x, y) {
-  return new MapCoordinate(GRID_START.x + (x * GRID_SQUARE_WIDTH), GRID_START.y + (y * GRID_SQUARE_HEIGHT));
-}
-
-// Draws a square with respect to the GRID_START global variable, given a set of X and Y indexes.
-// Returns a MapCoordinate object of where the square was drawn.
-function drawSquareFromGridStart(x, y, squareWidth) {
-  // This assumes GRID_SQUARE_WIDTH == GRID_SQUARE_HEIGHT
-  const squareCoordinate = getGridCoordinate(x, y);
-  square(squareCoordinate.x, squareCoordinate.y, squareWidth);
-  return squareCoordinate;
-}
-
 function drawGame() {
   background(COLOUR_MAPPING.BACKDROP_GAME);
   strokeWeight(2);
@@ -1462,6 +1183,149 @@ function drawOverlayMessage() {
   fill(COLOUR_MAPPING.WHITE);
   textFont(FONT_MAPPING.MONTSERRAT_MEDIUM);
   text(overlayMessageDescription, (GRID_START.x + outcomeMessageCentre.x) / 2, GRID_START.y + (outcomeMessageCentre.y / 2));
+}
+
+function setup() {
+  setupUI();
+  game.menuIndex = MENU_MAPPING.OVERVIEW;
+}
+
+function mouseClicked(event) {
+  if (game.menuIndex !== MENU_MAPPING.GAME || isSettingsPromptActive()) {
+    return;
+  }
+  console.debug(event);
+  // This needs to account for scrollbars when zoomed in or on smaller displays
+  let clickX = Math.floor((event.x + window.scrollX - (GRID_START.x * 0.5)) / GRID_SQUARE_WIDTH);
+  let clickY = Math.floor((event.y + window.scrollY - (GRID_START.y * 0.75)) / GRID_SQUARE_HEIGHT);
+  console.debug(clickX);
+  console.debug(clickY);
+  
+  if (isPhaseEncounter()) {
+    if (game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS) {
+      // FEATURE: Threats can be assigned to a selectable column
+      for (let t = 0; t < game.threatsPending.length; t++) {
+        if (game.threatsPending[t].y === clickY) {
+          console.debug(`Moving threat to ${game.threatsPending[t].x}, ${game.threatsPending[t].y}`);
+          let unfriendlyIndex = containsThreatType(game.threatsPending[t].x, game.threatsPending[t].y, game.threatsPending[t].type);
+          // First column is reserved for tanks
+          if (clickX >= CELL_RESERVATION.x && canThreatMoveToNewColumn(game.threatsPending[t], clickX, clickY)) {
+            game.grid[game.threatsPending[t].x][game.threatsPending[t].y].splice(unfriendlyIndex, 1);
+            game.threatsPending[t].x = clickX;
+            game.grid[game.threatsPending[t].x][game.threatsPending[t].y].push(game.threatsPending[t]);
+            break;
+          }
+        }
+      }
+    }
+  } else if (isPhaseManeuver()) {
+    // If this is checked later, swapping squad member positions isn't as easy
+    for (let m = 0; m < game.moveCoordinates.length; m++) {
+      if (clickX === game.moveCoordinates[m].x && clickY === game.moveCoordinates[m].y) {
+        let oldFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
+        let neighbourFriendlyIndex = getFriendlyIndexAt(clickX, clickY, SquadMember.friendlyIndex);
+        if (neighbourFriendlyIndex >= 0) {
+          // Switching squad members (this would only be possible when both are movable)
+          console.debug(`Switched squad members at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} <--> ${clickX},${clickY}`);
+          game.grid[clickX][clickY].push(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex]);
+          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].push(game.grid[clickX][clickY][neighbourFriendlyIndex]);
+          // Register movements
+          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].registerMove();
+          game.grid[clickX][clickY][neighbourFriendlyIndex].registerMove();
+          // Update squad list as well
+          game.squad[getSquadMemberIndexWithName(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].name)].setCoordinates(clickX, clickY);
+          game.squad[getSquadMemberIndexWithName(game.grid[clickX][clickY][neighbourFriendlyIndex].name)].setCoordinates(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y)
+          // Remove the squad members from their old positions
+          game.grid[clickX][clickY].splice(neighbourFriendlyIndex, 1);
+          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].splice(oldFriendlyIndex, 1);
+        } else {
+          // Moving a squad member
+          console.debug(`Moving squad member at ${game.squadSelectedCoordinate.x},${game.squadSelectedCoordinate.y} --> ${clickX},${clickY}`);
+          game.grid[clickX][clickY].push(game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex]);
+          // Register movements
+          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].registerMove();
+          // Update squad list as well
+          let name = game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][oldFriendlyIndex].name;
+          game.squad[getSquadMemberIndexWithName(name)].setCoordinates(clickX, clickY);
+          // Remove the squad member from their old position
+          game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y].splice(oldFriendlyIndex, 1);
+        }
+        
+        playSound(SOUND_MAPPING.SQUAD_MOVEMENT);
+        pressCancel();
+        // Force the movement squares to disappear once a movement is made
+        return false;
+      }
+    }
+  } else if (isPhaseAttack()) {
+    for (let a = 0; a < game.attackCoordinates.length; a++) {
+      if (clickX === game.attackCoordinates[a].x && clickY === game.attackCoordinates[a].y) {
+        let attackerFriendlyIndex = getFriendlyIndexAt(game.squadSelectedCoordinate.x, game.squadSelectedCoordinate.y, SquadMember.friendlyIndex);
+        
+        game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][attackerFriendlyIndex].attackCoordinate = new MapCoordinate(clickX, clickY);
+        
+        let threatIndex = getFriendlyIndexAt(clickX, clickY, Threat.friendlyIndex);
+        game.grid[clickX][clickY][threatIndex].strengthOpposition += game.grid[game.squadSelectedCoordinate.x][game.squadSelectedCoordinate.y][attackerFriendlyIndex].strength;
+        
+        pressCancel();
+        // Force the attack squares to disappear once an attack is made
+        return false;
+      }
+    }
+  }
+  
+  // User pressed some other area on the grid
+  if (clickX >= 0 && clickX < game.grid.length &&
+      clickY >= 0 && clickY < game.grid[0].length) {
+        console.debug(game.grid[clickX][clickY]);
+        // Determine if a squad member was pressed on
+        let friendlyIndex = getFriendlyIndexAt(clickX, clickY, SquadMember.friendlyIndex);
+        let threatIndex = getFriendlyIndexAt(clickX, clickY, Threat.friendlyIndex);
+        if (friendlyIndex >= 0) {
+          if (isPhaseManeuver()) {
+            // Prevent shown buttons from persisting from the previous selection
+            pressCancel();
+            // Generate the possible movement squares
+            // 
+            // ABILITY: The Athlete can move once after already moving
+            if (game.grid[clickX][clickY][friendlyIndex].up && (game.grid[clickX][clickY][friendlyIndex].isMovable() || game.grid[clickX][clickY][friendlyIndex].canMoveAfterMoving())) {
+              game.moveCoordinates = getMovementCoordinates(clickX, clickY);
+            } else {
+              // The squad member cannot move, but might be able to do other actions when selected
+              game.moveCoordinates = [];
+            }
+          } else if (isPhaseAttack()) {
+            // ABILITY: The Mouse can attack when down
+            if ((game.grid[clickX][clickY][friendlyIndex].up || game.grid[clickX][clickY][friendlyIndex].canAttackWhenDown()) && game.grid[clickX][clickY][friendlyIndex].canAttack && !game.grid[clickX][clickY][friendlyIndex].isAttacking()) {
+              // ABILITY: The Natural is allowed to attack diagonals
+              game.attackCoordinates = getAttackCoordinates(clickX, clickY, game.grid[clickX][clickY][friendlyIndex].canAttackDiagonally());
+            } else {
+              // We only care about clearing the valid attack poitions here
+              game.attackCoordinates = [];
+            }
+          }
+          game.squadSelectedCoordinate = new MapCoordinate(clickX, clickY);
+          playSoundSquadSelect(game.grid[clickX][clickY][friendlyIndex]);
+          // Flipping up is only allowed in the Maneuver phase, so no point in doing redundant computations for other phases
+          if (isPhaseManeuver()) {
+            game.squadSelectedCoordinateCanFlipUp = canFlipUp(clickX, clickY, friendlyIndex);
+          }
+        } else {
+          // User pressed on some area without a squad member in it
+          pressCancel();
+        }
+        
+        // Get info about threats at the given location
+        if (threatIndex >= 0) {
+          game.threatsSelected = getAllThreatsAt(clickX, clickY);
+          for (let i = 0; i < game.threatsSelected.length; i++) {
+            playSoundThreatSelect(game.threatsSelected[i].type);
+          }
+        } else {
+          game.threatsSelected = [];
+        }
+      }
+  return false;
 }
 
 function preload() {
