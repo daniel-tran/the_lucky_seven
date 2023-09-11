@@ -17,4 +17,4 @@ The Settings button, or the button with the spanner icon, will allow certain ele
 Applying any changes will start a new game with the configured settings applied.
 
 # Disclaimer
-This open source project is not endorsed by nor affiliated with Coincidence.
+This open source project is not endorsed by nor affiliated with Coincidence. Consequently, this project is not guaranteed to remain up to date with any modifications to the official rules of "The Lucky Seven".
