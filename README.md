@@ -1,8 +1,15 @@
 # The Lucky Seven - Virtual Edition
 An unofficial browser version of "[The Lucky Seven](https://coincidence.games/the-lucky-seven/)" by Coincidence.
 
-# Recommended devices
+# Recommended devices and browsers
 This game is best played on either a standard 16:9 display such as a desktop monitor or on a tablet device.
+
+For browsers, this game is best played on Google Chrome, Mozilla Firefox or Microsoft Edge.
+
+# Play online
+Prerequisites: A working Internet connection
+
+https://daniel-tran.github.io/the_lucky_seven/
 
 # Play locally
 Prerequisites: Node.js 18 or higher is installed on your machine
