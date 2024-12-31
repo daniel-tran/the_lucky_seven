@@ -69,6 +69,7 @@ function showSettings() {
   document.getElementById("ui-settings-option-8").value = storedSettings.THREAT_COUNT_MAPPING[4];
   document.getElementById("ui-settings-option-9").value = storedSettings.THREAT_COUNT_MAPPING[5];
   document.getElementById("ui-settings-option-10").value = storedSettings.THREAT_COUNT_MAPPING[0];
+  document.getElementById("ui-settings-option-11").value = storedSettings.THREAT_COUNT_MAPPING[6];
 }
 
 // Ensures a numeric input respects the min and max bounds, and sets the respective element to the normalised value
@@ -110,6 +111,7 @@ function applySettings(shouldResetGame = true) {
       3: normaliseSettingNumber("ui-settings-option-7"),
       4: normaliseSettingNumber("ui-settings-option-8"),
       5: normaliseSettingNumber("ui-settings-option-9"),
+      6: normaliseSettingNumber("ui-settings-option-11"),
     },
 
     // Controls whether threats with 0 strength still have the ability to defeat squad members
@@ -139,6 +141,7 @@ function configureSettingsDefault() {
   document.getElementById("ui-settings-option-8").value = "6";
   document.getElementById("ui-settings-option-9").value = "6";
   document.getElementById("ui-settings-option-10").value = "4";
+  document.getElementById("ui-settings-option-11").value = "0";
 }
 
 // Module exports should only be set when running unit tests, as this causes a console error when running the sketch
