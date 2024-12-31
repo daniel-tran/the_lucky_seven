@@ -779,7 +779,9 @@ function startPhaseEncounter() {
       }
     }
     game.grid[newThreat.x][newThreat.y].push(newThreat);
-    if (game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS) {
+    // Zach replied in an email that "the Depot is never on the edge of the map, as otherwise it's too hard to defeat",
+    // so lock its column to wherever its initial location is.
+    if (game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS && newThreat.type !== Threat.type["Depot"]) {
       game.threatsPending.push(newThreat);
     }
     
