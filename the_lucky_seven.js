@@ -749,19 +749,18 @@ function startPhaseEncounter() {
     // Note that threats are not guaranteed to be distributed equally among all rows, so this cannot be pre-calculated
     newThreat.y = i;
     if (newThreat.type === Threat.type["Depot"]) {
-      let mapCardOffset = new MapCoordinate(MIN_MAP_CARD_VALUE, MIN_MAP_CARD_VALUE);
-      newThreat.x = findMapCardWithValue(game.mapcardsX, "-") + mapCardOffset.x;
-      newThreat.y = findMapCardWithValue(game.mapcardsY, MAX_MAP_CARD_VALUE) + mapCardOffset.y;
+      newThreat.x = findMapCardWithValue(game.mapcardsX, "-") + CELL_RESERVATION.x;
+      newThreat.y = findMapCardWithValue(game.mapcardsY, MAX_MAP_CARD_VALUE) + CELL_RESERVATION.y;
 
       // The depot should not be touching either the horizontal or vertical edges of the map
       // At this point of the game, the "-" map card should already be swapped to the correct location
       let mapCardOffsetMax = new MapCoordinate(game.mapcardsX.length, game.mapcardsY.length);
-      if (newThreat.x <= mapCardOffset.x) {
+      if (newThreat.x <= CELL_RESERVATION.x) {
         newThreat.x++;
       } else if (newThreat.x >= mapCardOffsetMax.x) {
         newThreat.x--;
       }
-      if (newThreat.y <= mapCardOffset.y) {
+      if (newThreat.y <= CELL_RESERVATION.y) {
         newThreat.y++;
       } else if (newThreat.y >= mapCardOffsetMax.y) {
         newThreat.y--;
@@ -1210,7 +1209,7 @@ function drawOverlayMessage() {
         return;
       }
       // Negative offset is needed because threats cannot spawn in the topmost row
-      if (game.threats.length <= (game.grid[0].length - MIN_MAP_CARD_VALUE)) {
+      if (game.threats.length <= (game.grid[0].length - CELL_RESERVATION.y)) {
         let turnPlural = "TURNS";
         if (game.finalTurnsRemaining === 1) {
           turnPlural = "TURN";
