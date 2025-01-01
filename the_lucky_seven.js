@@ -163,7 +163,7 @@ function setupNewGame() {
     console.debug("Determining if map cards need to be swapped for the Depot");
     let emptyMapCardIndex = findMapCardWithValue(game.mapcardsX, "-");
     let firstMapCardIndex = 0;
-    let lastMapCardIndex = game.mapcardsX.length;
+    let lastMapCardIndex = game.mapcardsX.length - 1;
     if (emptyMapCardIndex === firstMapCardIndex) {
       console.debug("Switching horizontal map cards (leftmost edge) for Depot");
       let tempMapCard = game.mapcardsX[firstMapCardIndex + 1];
@@ -752,14 +752,16 @@ function startPhaseEncounter() {
       newThreat.x = findMapCardWithValue(game.mapcardsX, "-") + CELL_RESERVATION.x;
       newThreat.y = findMapCardWithValue(game.mapcardsY, MAX_MAP_CARD_VALUE) + CELL_RESERVATION.y;
 
-      // The depot should not be touching either the horizontal or vertical edges of the map
+      // The Depot should not be touching either the horizontal or vertical edges of the map
       // At this point of the game, the "-" map card should already be swapped to the correct location
       let mapCardOffsetMax = new MapCoordinate(game.mapcardsX.length, game.mapcardsY.length);
+      // If the Depot is somehow on the horizontal edges (most likely due to misplaced "-" map card), manually shift it into place
       if (newThreat.x <= CELL_RESERVATION.x) {
         newThreat.x++;
       } else if (newThreat.x >= mapCardOffsetMax.x) {
         newThreat.x--;
       }
+      // Depot is shifted away from vertical edges
       if (newThreat.y <= CELL_RESERVATION.y) {
         newThreat.y++;
       } else if (newThreat.y >= mapCardOffsetMax.y) {
