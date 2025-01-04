@@ -918,8 +918,8 @@ function startPhaseCounterAttack() {
       // Prevent accumulation of squad member attacks
       game.threatsActive[i].postAttackReset();
       
-      if (game.settings.THREAT_CANNOT_ATTACK_AT_ZERO_STRENGTH && game.threatsActive[i].getStrength() <= 0 && game.threatsActive[i].canAttack && !threatsDistractedFromAttacking) {
-        // ABILITY: Threats with 0 strength & non-attacking threats do no attacks
+      if ((game.settings.THREAT_CANNOT_ATTACK_AT_ZERO_STRENGTH && game.threatsActive[i].getStrength() <= 0) || !game.threatsActive[i].canAttack || threatsDistractedFromAttacking) {
+        // ABILITY: Threats with 0 strength, non-attacking threats or distracted threats do no attacks
         continue;
       }
       switch(game.threatsActive[i].type) {
