@@ -7,6 +7,7 @@ class Threat {
     "Machine Gun": 3,
     "Flare": 4,
     "Mortar": 5,
+    "Depot": 6,
   };
   
   constructor(type, x, y) {
@@ -20,6 +21,7 @@ class Threat {
     this.isFriendly = Threat.friendlyIndex;
     this.strengthOpposition = 0;
     this.strengthReduction = 0;
+    this.canAttack = true;
     
     let description = [];
     switch (type) {
@@ -28,36 +30,52 @@ class Threat {
         description = ["Discard all squad members in this row that are up.", "Then discard this card."];
         this.strength = 9;
         this.canOverlapWithSquad = true;
+        this.canAttack = true;
         break;
       case Threat.type["Infantry 1"]:
         this.name = "Infantry";
         description = ["Discard all adjacent squad members."];
         this.strength = 1;
         this.canOverlapWithSquad = false;
+        this.canAttack = true;
         break;
       case Threat.type["Infantry 2"]:
         this.name = "Infantry";
         description = ["Discard all adjacent squad members."];
         this.strength = 2;
         this.canOverlapWithSquad = false;
+        this.canAttack = true;
         break;
       case Threat.type["Machine Gun"]:
         this.name = "Machine Gun";
         description = ["Discard all adjacent squad members that are up."];
         this.strength = 3;
         this.canOverlapWithSquad = false;
+        this.canAttack = true;
         break;
       case Threat.type["Flare"]:
         this.name = "Flare";
         description = ["The squad member here may not move.", "Other squad members may not move here.", "Discard this card at the end of the phase."];
         this.strength = 0;
         this.canOverlapWithSquad = true;
+        this.canAttack = false;
         break;
       case Threat.type["Mortar"]:
         this.name = "Mortar";
         description = ["Flip down and rotate the squad member here.", "Then flip down all adjacent squad members.", "Finally, discard this card."];
         this.strength = 0;
         this.canOverlapWithSquad = true;
+        this.canAttack = false;
+        break;
+      case Threat.type["Depot"]:
+        this.name = "Depot";
+        // The actual printed card seems to have this text:
+        // "When you attack and defeat this threat, flip it over instead of discarding it"
+        // "When a threat would cause you to discard a squad member, prevent that discard. Discard this card at the end of the turn."
+        description = ["When defeated, squad members are not discarded during this turn."];
+        this.strength = 4;
+        this.canOverlapWithSquad = false;
+        this.canAttack = false;
         break;
     }
     this.descriptionHTML = description.join("<br>");

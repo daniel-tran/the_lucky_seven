@@ -155,9 +155,39 @@ function setupNewGame() {
   // Randomise starting squad members
   game.squad = shuffleListNonDestructively(squadBench, game.settings.SQUAD_MEMBERS_SUBTRACTION);
   
+  // Randomise horizontal map cards
+  // This has to be done *before* threat positions are calculated, as the Depot has to spawn in a certain column
+  // and the distribution of map cards can vary to accomodate for the Depot's spawn location
+  game.mapcardsX = shuffleListNonDestructively(MAPCARDS_BENCH_X);
+  if (game.settings.THREAT_COUNT_MAPPING[Threat.type["Depot"]] > 0) {
+    console.debug("Determining if map cards need to be swapped for the Depot");
+    let emptyMapCardIndex = findMapCardWithValue(game.mapcardsX, "-");
+    let firstMapCardIndex = 0;
+    let lastMapCardIndex = game.mapcardsX.length - 1;
+    if (emptyMapCardIndex === firstMapCardIndex) {
+      console.debug("Switching horizontal map cards (leftmost edge) for Depot");
+      let tempMapCard = game.mapcardsX[firstMapCardIndex + 1];
+      game.mapcardsX[firstMapCardIndex + 1] = game.mapcardsX[emptyMapCardIndex];
+      game.mapcardsX[emptyMapCardIndex] = tempMapCard;
+    } else if (emptyMapCardIndex === lastMapCardIndex) {
+      console.debug("Switching horizontal map cards (rightmost edge) for Depot");
+      let tempMapCard = game.mapcardsX[lastMapCardIndex - 1];
+      game.mapcardsX[lastMapCardIndex - 1] = game.mapcardsX[emptyMapCardIndex];
+      game.mapcardsX[emptyMapCardIndex] = tempMapCard;
+    }
+  }
+  console.debug("Finished horizontal map cards");
+  console.debug(JSON.stringify(game.mapcardsX));
+  
+  // Randomise vertical map cards
+  game.mapcardsY = shuffleListNonDestructively(MAPCARDS_BENCH_Y);
+  console.debug("Finished vertical map cards");
+  console.debug(JSON.stringify(game.mapcardsY));
+  
   // Randomise regular threats (since we don't know the absolute card spread, this generates
   // some extra cards that gets omitted when shuffling)
   const threatTypes = Object.keys(game.settings.THREAT_COUNT_MAPPING);
+  let threatsDefault = [];
   for (let threatType = Number(threatTypes[0]); threatType < threatTypes.length; threatType++) {
     // First column is reserved for tanks, so this corresponds to the column index
     for (let threatCount = CELL_RESERVATION.x; threatCount <= game.settings.THREAT_COUNT_MAPPING[threatType]; threatCount++) {
@@ -169,22 +199,18 @@ function setupNewGame() {
         // First column is reserved for tanks, so this corresponds to the first column index when looping back
         threatCountAdjusted = CELL_RESERVATION.x;
       }
+      // Some threats are spawned with increased priority when the game starts
+      if (threatType === Threat.type["Depot"]) {
+        console.debug("Depot is currently active!");
+        threatsDefault.push(new Threat(threatType, findMapCardWithValue(game.mapcardsX, "-"), -1));
+        continue;
+      }
       // Y coordinate is set to negative because it's calculated properly during the Encounter phase
       game.threats.push(new Threat(threatType, threatCountAdjusted, -1));
     }
   }
-  game.threats = shuffleListNonDestructively(game.threats, game.threats.length - game.settings.THREAT_COUNT_TOTAL);
+  game.threats = [...threatsDefault, ...shuffleListNonDestructively(game.threats, game.threats.length - game.settings.THREAT_COUNT_TOTAL)];
   console.debug(`Total threats: ${game.threats.length}`);
-  
-  // Randomise horizontal map cards
-  game.mapcardsX = shuffleListNonDestructively(MAPCARDS_BENCH_X);
-  console.debug("Finished horizontal map cards");
-  console.debug(JSON.stringify(game.mapcardsX));
-  
-  // Randomise vertical map cards
-  game.mapcardsY = shuffleListNonDestructively(MAPCARDS_BENCH_Y);
-  console.debug("Finished vertical map cards");
-  console.debug(JSON.stringify(game.mapcardsY));
   
   // Randomise squad member positions
   let c = MIN_MAP_CARD_VALUE;
@@ -367,6 +393,10 @@ function setupUI() {
         5: {
           card: `${pathPrefixCards}/mortar.png`,
           icon: IMAGE_MAPPING.ICON_THREAT_MORTAR,
+        },
+        6: {
+          card: `${pathPrefixCards}/depot.png`,
+          icon: IMAGE_MAPPING.ICON_THREAT_DEPOT,
         },
       },
     },
@@ -710,6 +740,7 @@ function resolveThreatOverlap(threatToBePlaced, column, row) {
 
 function startPhaseEncounter() {
   // PHASE SUMMARY
+  // - Spawn Depot at coordinate -,7/8, or whichever of the two middle rows is closer to the row labeled 7/8.
   // - When there are no threats, start the countdown at 2 turns (including the turn when it was realised there are no more threats)
   // - Determine win condition at the end of that final turn (i.e. lose if everyone is gone or any threats remain by the Wrap Up phase) 
   console.debug("Encounter phase has started.");
@@ -717,20 +748,47 @@ function startPhaseEncounter() {
     let newThreat = game.threats.splice(0, 1)[0];
     // Note that threats are not guaranteed to be distributed equally among all rows, so this cannot be pre-calculated
     newThreat.y = i;
+    if (newThreat.type === Threat.type["Depot"]) {
+      newThreat.x = findMapCardWithValue(game.mapcardsX, "-") + CELL_RESERVATION.x;
+      newThreat.y = findMapCardWithValue(game.mapcardsY, MAX_MAP_CARD_VALUE) + CELL_RESERVATION.y;
+
+      // The Depot should not be touching either the horizontal or vertical edges of the map
+      // At this point of the game, the "-" map card should already be swapped to the correct location
+      let mapCardOffsetMax = new MapCoordinate(game.mapcardsX.length, game.mapcardsY.length);
+      // If the Depot is somehow on the horizontal edges (most likely due to misplaced "-" map card), manually shift it into place
+      if (newThreat.x <= CELL_RESERVATION.x) {
+        newThreat.x++;
+      } else if (newThreat.x >= mapCardOffsetMax.x) {
+        newThreat.x--;
+      }
+      // Depot is shifted away from vertical edges
+      if (newThreat.y <= CELL_RESERVATION.y) {
+        newThreat.y++;
+      } else if (newThreat.y >= mapCardOffsetMax.y) {
+        newThreat.y--;
+      }
+    }
     game.threatsActive.push(newThreat);
-    console.debug(`${newThreat.name} (${newThreat.getStrength()}) was placed at ${newThreat.x},${i}`);
-    if (game.grid[newThreat.x][i].length > 0 && !newThreat.canOverlapWithSquad) {
+    console.debug(`${newThreat.name} (${newThreat.getStrength()}) was placed at ${newThreat.x},${newThreat.y}`);
+    if (game.grid[newThreat.x][newThreat.y].length > 0 && !newThreat.canOverlapWithSquad) {
       console.debug("PROBLEM! Overlap has to be handled");
-      newThreat.x = resolveThreatOverlap(newThreat, newThreat.x, i);
-      console.debug(`${newThreat.name} (${newThreat.getStrength()}) was shifted to ${newThreat.x},${i}`);
+      newThreat.x = resolveThreatOverlap(newThreat, newThreat.x, newThreat.y);
+      console.debug(`${newThreat.name} (${newThreat.getStrength()}) was shifted to ${newThreat.x},${newThreat.y}`);
       if (newThreat.x < 0) {
         console.debug(`${newThreat.name} (${newThreat.getStrength()}) has been discarded since the row is full`);
         continue;
       }
     }
-    game.grid[newThreat.x][i].push(newThreat);
-    if (game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS) {
+    game.grid[newThreat.x][newThreat.y].push(newThreat);
+    // Zach replied in an email that "the Depot is never on the edge of the map, as otherwise it's too hard to defeat",
+    // so lock its column to wherever its initial location is.
+    if (game.settings.SELECTABLE_COLUMN_FOR_ENCOUNTERED_THREATS && newThreat.type !== Threat.type["Depot"]) {
       game.threatsPending.push(newThreat);
+    }
+    
+    // The Depot is not one of the initial threat cards, so there will be a row with multiple threats
+    if (newThreat.type === Threat.type["Depot"]) {
+      i--;
     }
   }
   
@@ -843,12 +901,16 @@ function startPhaseCounterAttack() {
 
   // Remove defeated active threats
   let defeatedThreatCoordinates = [];
+  let threatsDistractedFromAttacking = false;
   for (let i = 0; i < game.threatsActive.length; i++) {
     console.debug(game.threatsActive[i]);
     if (game.threatsActive[i].isDefeated()) {
       console.debug(`Defeated ${game.threatsActive[i].name}`);
       // Remove the same threats from the grid
       let threatIndex = getFriendlyIndexAt(game.threatsActive[i].x, game.threatsActive[i].y, Threat.friendlyIndex);
+      if (game.threatsActive[i].type === Threat.type["Depot"]) {
+        threatsDistractedFromAttacking = true;
+      }
       game.grid[game.threatsActive[i].x][game.threatsActive[i].y].splice(threatIndex, 1);
       game.threatsInactive.push(game.threatsActive.splice(i, 1));
       i--;
@@ -856,8 +918,8 @@ function startPhaseCounterAttack() {
       // Prevent accumulation of squad member attacks
       game.threatsActive[i].postAttackReset();
       
-      if (game.settings.THREAT_CANNOT_ATTACK_AT_ZERO_STRENGTH && game.threatsActive[i].getStrength() <= 0) {
-        // ABILITY: Threats with 0 strength do no attacks
+      if ((game.settings.THREAT_CANNOT_ATTACK_AT_ZERO_STRENGTH && game.threatsActive[i].getStrength() <= 0) || !game.threatsActive[i].canAttack || threatsDistractedFromAttacking) {
+        // ABILITY: Threats with 0 strength, non-attacking threats or distracted threats do no attacks
         continue;
       }
       switch(game.threatsActive[i].type) {
@@ -879,11 +941,18 @@ function startPhaseCounterAttack() {
   for (let i = 0; i < game.squad.length; i++) {
     game.squad[i].postAttackReset();
   }
+  // Clear these out in the event of a distraction, as they can be accumulated before the actual determination of the depot being destroyed is realised
+  if (threatsDistractedFromAttacking) {
+    console.debug("Threats are distracted from attacking this turn");
+    game.counterAttackCoordinates = [];
+    game.counterAttackCoordinatesDodgeable = [];
+  }
   determineGameOutcome();
   console.debug("Counter-Attack phase has started.");
   
   // PHASE SUMMARY
   // - Highlight all squares that active threats will attack
+  // - Apply threat distraction rules that cause threats to not attack this turn
 }
 
 function startPhaseWrapUp() {
@@ -1141,7 +1210,8 @@ function drawOverlayMessage() {
       if (!isPhaseWrapUp()) {
         return;
       }
-      if (game.threats.length <= game.grid[0].length) {
+      // Negative offset is needed because threats cannot spawn in the topmost row
+      if (game.threats.length <= (game.grid[0].length - CELL_RESERVATION.y)) {
         let turnPlural = "TURNS";
         if (game.finalTurnsRemaining === 1) {
           turnPlural = "TURN";
@@ -1340,6 +1410,7 @@ function preload() {
     "ICON_THREAT_MACHINE_GUN": loadImage("images/icons/machinegun.png"),
     "ICON_THREAT_FLARE": loadImage("images/icons/flare.png"),
     "ICON_THREAT_MORTAR": loadImage("images/icons/mortar.png"),
+    "ICON_THREAT_DEPOT": loadImage("images/icons/depot.png"),
     "ICON_SQUAD_LEADER_UP": loadImage("images/icons/squad_leader_up.png"),
     "ICON_SQUAD_LEADER_DOWN": loadImage("images/icons/squad_leader_down.png"),
     "ICON_SQUAD_ATHLETE_UP": loadImage("images/icons/squad_athlete_up.png"),
@@ -1381,6 +1452,7 @@ function preload() {
       3: [loadSound("sounds/threats/machine_gun.wav")],
       4: [loadSound("sounds/threats/flare.wav")],
       5: [loadSound("sounds/threats/mortar.wav")],
+      6: [loadSound("sounds/threats/depot.wav")],
     },
     "SELECT_SQUAD": {
       // Each squad member says certain phrases depending on the phase
